@@ -93,7 +93,6 @@ import '../platform/extensionManagement/electron-browser/extensionsProfileScanne
 import '../platform/sandbox/electron-browser/sandboxHelperService.js';
 import '../platform/webContentExtractor/electron-browser/webContentExtractorService.js';
 import '../platform/agentHost/browser/agentHostEnablementService.js';
-import './services/browserView/electron-browser/playwrightWorkbenchService.js';
 import './services/process/electron-browser/processService.js';
 import './services/power/electron-browser/powerService.js';
 
