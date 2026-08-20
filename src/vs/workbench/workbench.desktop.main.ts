@@ -92,18 +92,25 @@ import './services/auxiliaryWindow/electron-browser/auxiliaryWindowService.js';
 import '../platform/extensionManagement/electron-browser/extensionsProfileScannerService.js';
 import '../platform/sandbox/electron-browser/sandboxHelperService.js';
 import '../platform/webContentExtractor/electron-browser/webContentExtractorService.js';
-import './services/agentHost/electron-browser/agentHostService.js';
-import '../platform/agentHost/electron-browser/remoteAgentHostService.js';
 import '../platform/agentHost/browser/agentHostEnablementService.js';
 import './services/browserView/electron-browser/playwrightWorkbenchService.js';
 import './services/process/electron-browser/processService.js';
 import './services/power/electron-browser/powerService.js';
 
-import { registerSingleton } from '../platform/instantiation/common/extensions.js';
+import { InstantiationType, registerSingleton } from '../platform/instantiation/common/extensions.js';
 import { IUserDataInitializationService, UserDataInitializationService } from './services/userData/browser/userDataInit.js';
 import { SyncDescriptor } from '../platform/instantiation/common/descriptors.js';
+import { IAgentHostService } from '../platform/agentHost/common/agentService.js';
+import { NullAgentHostService } from '../platform/agentHost/browser/nullAgentHostService.js';
+import { IRemoteAgentHostService, NullRemoteAgentHostService } from '../platform/agentHost/common/remoteAgentHostService.js';
 
 registerSingleton(IUserDataInitializationService, new SyncDescriptor(UserDataInitializationService, [[]], true));
+
+// The bundled agent-host backend (vendored Claude/Codex/Copilot CLI clients) has been
+// removed from core. The service interfaces remain so that the chat/LM extension API
+// surface still compiles; they resolve to no-op implementations.
+registerSingleton(IAgentHostService, NullAgentHostService, InstantiationType.Delayed);
+registerSingleton(IRemoteAgentHostService, NullRemoteAgentHostService, InstantiationType.Delayed);
 
 
 //#endregion
@@ -134,7 +141,6 @@ import './contrib/extensions/electron-browser/devtoolsExtensionHost.contribution
 import './contrib/issue/electron-browser/issue.contribution.js';
 
 // Surveys
-import './contrib/surveys/browser/survey.contribution.js';
 
 // Process Explorer
 import './contrib/processExplorer/electron-browser/processExplorer.contribution.js';
@@ -167,7 +173,6 @@ import './contrib/externalTerminal/electron-browser/externalTerminal.contributio
 import './contrib/webview/electron-browser/webview.contribution.js';
 
 // Browser
-import './contrib/browserView/electron-browser/browserView.contribution.js';
 
 // Splash
 import './contrib/splash/electron-browser/splash.contribution.js';
@@ -189,7 +194,6 @@ import './contrib/chat/electron-browser/chat.contribution.js';
 import './contrib/chat/electron-browser/tunnelHost.contribution.js';
 
 // Copilot Voice
-import './contrib/agentsVoice/electron-browser/agentsVoiceNativeCommands.js';
 
 // Encryption
 import './contrib/encryption/electron-browser/encryption.contribution.js';
@@ -198,7 +202,6 @@ import './contrib/encryption/electron-browser/encryption.contribution.js';
 import './contrib/emergencyAlert/electron-browser/emergencyAlert.contribution.js';
 
 // MCP
-import './contrib/mcp/electron-browser/mcp.contribution.js';
 
 // Policy Export
 import './contrib/policyExport/electron-browser/policyExport.contribution.js';

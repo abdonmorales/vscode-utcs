@@ -175,7 +175,6 @@ import './contrib/tags/browser/workspaceTagsService.js';
 import './contrib/issue/browser/issue.contribution.js';
 
 // Surveys
-import './contrib/surveys/browser/survey.contribution.js';
 
 // Splash
 import './contrib/splash/browser/splash.contribution.js';
@@ -187,6 +186,5 @@ import './contrib/remote/browser/remoteStartEntry.contribution.js';
 import './contrib/processExplorer/browser/processExplorer.web.contribution.js';
 
 // Browser View
-import './contrib/browserView/browser/browserView.contribution.js';
 
 //#endregion
