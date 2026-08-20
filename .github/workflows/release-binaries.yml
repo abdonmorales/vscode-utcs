@@ -6,18 +6,35 @@ name: Build and Publish Release Binaries
 # Windows, on both x64 and arm64 where GitHub provides a native runner, and
 # attaches each as a downloadable asset on a GitHub Release.
 #
+# Triggers on pushing a version tag (`v*`) - this is a ref-based event, so it
+# fires regardless of which branch the tagged commit lives on. It does NOT
+# require this workflow file to be on the repository's default branch, which
+# matters here: `main` is kept as a clean mirror for pulling in upstream
+# fixes, and all fork-specific work (including this workflow) lives on the
+# dev branch instead. If no release exists yet for the pushed tag, one is
+# created automatically before assets are uploaded to it.
+#
+# `release: published` and manual `workflow_dispatch` are also wired up as
+# convenience triggers, but note GitHub only auto-fires `release` events for
+# workflow files that exist on the default branch - on a non-default branch,
+# use workflow_dispatch (Actions tab -> this workflow -> Run workflow, with
+# the branch selector) or just push a tag, which works from any branch.
+#
 # Runs on GitHub-hosted runners, which have normal internet access - unlike the
 # sandboxed environment this workflow was originally authored in, so none of
 # the .npmrc/kerberos/GITHUB_TOKEN workarounds documented in this repo's commit
 # history should be necessary here.
 
 on:
+  push:
+    tags:
+      - 'v*'
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to build and attach binaries to (defaults to the latest release if omitted)'
+        description: 'Tag to build and attach binaries to (defaults to the latest release if omitted)'
         required: false
         type: string
 
@@ -34,12 +51,26 @@ jobs:
         id: tag
         run: |
           if [ -n "${{ inputs.tag }}" ]; then
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+            TAG="${{ inputs.tag }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${{ github.ref_name }}"
           elif [ -n "${{ github.event.release.tag_name }}" ]; then
-            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+            TAG="${{ github.event.release.tag_name }}"
           else
-            LATEST_TAG=$(gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName)
-            echo "tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+            TAG=$(gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName)
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure a release exists for this tag
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "No release found for $TAG yet - creating one."
+            gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --generate-notes
+          else
+            echo "Release $TAG already exists."
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
