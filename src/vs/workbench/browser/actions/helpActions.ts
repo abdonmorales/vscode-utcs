@@ -310,6 +310,31 @@ class OpenPrivacyStatementUrlAction extends Action2 {
 	}
 }
 
+class GetStartedWithAccessibilityFeatures extends Action2 {
+
+	static readonly ID = 'workbench.action.getStartedWithAccessibilityFeatures';
+
+	constructor() {
+		super({
+			id: GetStartedWithAccessibilityFeatures.ID,
+			title: localize2('getStartedWithAccessibilityFeatures', 'Get Started with Accessibility Features'),
+			category: Categories.Help,
+			f1: true,
+			precondition: IsSessionsWindowContext.negate(),
+			menu: {
+				id: MenuId.MenubarHelpMenu,
+				group: '1_welcome',
+				order: 6,
+				when: IsSessionsWindowContext.negate()
+			}
+		});
+	}
+	run(accessor: ServicesAccessor): void {
+		const commandService = accessor.get(ICommandService);
+		commandService.executeCommand('workbench.action.openWalkthrough', 'SetupAccessibility');
+	}
+}
+
 class AskVSCodeCopilot extends Action2 {
 	static readonly ID = 'workbench.action.askVScode';
 
@@ -378,5 +403,6 @@ if (OpenPrivacyStatementUrlAction.AVAILABLE) {
 	registerAction2(OpenPrivacyStatementUrlAction);
 }
 
+registerAction2(GetStartedWithAccessibilityFeatures);
 
 registerAction2(AskVSCodeCopilot);

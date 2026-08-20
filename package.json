@@ -272,10 +272,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/microsoft/vscode.git"
+    "url": "https://github.com/abdonmorales/vscode-utcs.git"
   },
   "bugs": {
-    "url": "https://github.com/microsoft/vscode/issues"
+    "url": "https://github.com/abdonmorales/vscode-utcs/issues"
   },
   "optionalDependencies": {
     "kerberos": "2.1.1",
