@@ -323,6 +323,32 @@ const excludedExtensions = [
 	'vscode-test-resolver',
 	'ms-vscode.node-debug',
 	'ms-vscode.node-debug2',
+	// Niche/rarely-used language grammar packs: available on-demand from the
+	// marketplace, not worth bundling into core for a lightweight build.
+	'bat',
+	'clojure',
+	'coffeescript',
+	'dotenv',
+	'fsharp',
+	'groovy',
+	'grunt',
+	'gulp',
+	'handlebars',
+	'hlsl',
+	'ini',
+	'jake',
+	'julia',
+	'latex',
+	'log',
+	'lua',
+	'make',
+	'objective-c',
+	'pug',
+	'r',
+	'razor',
+	'restructuredtext',
+	'shaderlab',
+	'vb',
 ];
 
 const marketplaceWebExtensionsExclude = new Set([
