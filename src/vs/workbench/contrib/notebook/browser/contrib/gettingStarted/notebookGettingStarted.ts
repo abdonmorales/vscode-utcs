@@ -7,8 +7,6 @@ import { Disposable } from '../../../../../../base/common/lifecycle.js';
 import { localize2 } from '../../../../../../nls.js';
 import { Categories } from '../../../../../../platform/action/common/actionCommonCategories.js';
 import { Action2, registerAction2 } from '../../../../../../platform/actions/common/actions.js';
-import { ICommandService } from '../../../../../../platform/commands/common/commands.js';
-import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
 import { ContextKeyExpr, IContextKeyService } from '../../../../../../platform/contextkey/common/contextkey.js';
 import { ServicesAccessor } from '../../../../../../platform/instantiation/common/instantiation.js';
 import { Registry } from '../../../../../../platform/registry/common/platform.js';
@@ -22,11 +20,9 @@ import { IEditorService } from '../../../../../services/editor/common/editorServ
 import { LifecyclePhase } from '../../../../../services/lifecycle/common/lifecycle.js';
 
 const hasOpenedNotebookKey = 'hasOpenedNotebook';
-const hasShownGettingStartedKey = 'hasShownNotebookGettingStarted';
 
 interface INotebookGettingStartedMemento {
 	hasOpenedNotebook?: boolean;
-	hasShownNotebookGettingStarted?: boolean;
 }
 
 /**
@@ -38,8 +34,6 @@ export class NotebookGettingStarted extends Disposable implements IWorkbenchCont
 		@IEditorService _editorService: IEditorService,
 		@IStorageService _storageService: IStorageService,
 		@IContextKeyService _contextKeyService: IContextKeyService,
-		@ICommandService _commandService: ICommandService,
-		@IConfigurationService _configurationService: IConfigurationService,
 	) {
 		super();
 
@@ -50,17 +44,10 @@ export class NotebookGettingStarted extends Disposable implements IWorkbenchCont
 			hasOpenedNotebook.set(true);
 		}
 
-		const needToShowGettingStarted = _configurationService.getValue(NotebookSetting.openGettingStarted) && !storedValue[hasShownGettingStartedKey];
-		if (!storedValue[hasOpenedNotebookKey] || needToShowGettingStarted) {
+		if (!storedValue[hasOpenedNotebookKey]) {
 			const onDidOpenNotebook = () => {
 				hasOpenedNotebook.set(true);
 				storedValue[hasOpenedNotebookKey] = true;
-
-				if (needToShowGettingStarted) {
-					_commandService.executeCommand('workbench.action.openWalkthrough', { category: 'notebooks', step: 'notebookProfile' }, true);
-					storedValue[hasShownGettingStartedKey] = true;
-				}
-
 				memento.saveMemento();
 			};
 

@@ -40,7 +40,15 @@ export class NullAgentHostService implements IAgentHostService {
 
 	readonly initializeResult: IObservable<InitializeResult | undefined> = constObservable(undefined);
 
-	get rootState(): IAgentSubscription<RootState> { return notSupported(); }
+	private readonly _noopRootState: IAgentSubscription<RootState> = {
+		value: undefined,
+		verifiedValue: undefined,
+		onDidChange: Event.None,
+		onWillApplyAction: Event.None,
+		onDidApplyAction: Event.None,
+	};
+
+	get rootState(): IAgentSubscription<RootState> { return this._noopRootState; }
 
 	getSubscription<T extends StateComponents>(_kind: T, _resource: URI, _owner: string): IReference<IAgentSubscription<ComponentToState[T]>> { return notSupported(); }
 	getSubscriptionUnmanaged<T extends StateComponents>(_kind: T, _resource: URI): IAgentSubscription<ComponentToState[T]> | undefined { return undefined; }

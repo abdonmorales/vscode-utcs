@@ -7,13 +7,15 @@ import { renderAsPlaintext } from '../../../../base/browser/markdownRenderer.js'
 import { IMarkdownString } from '../../../../base/common/htmlContent.js';
 import { stripIcons } from '../../../../base/common/iconLabels.js';
 import { getMediaMime } from '../../../../base/common/mime.js';
+import { Schemas } from '../../../../base/common/network.js';
 import { isEqual } from '../../../../base/common/resources.js';
 import { URI } from '../../../../base/common/uri.js';
 import { VSBuffer } from '../../../../base/common/buffer.js';
 import { localize } from '../../../../nls.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { ICommandService } from '../../../../platform/commands/common/commands.js';
+import { CommandsRegistry, ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IFileService } from '../../../../platform/files/common/files.js';
+import { IEditorService } from '../../../services/editor/common/editorService.js';
 import type { IChatRequestVariableEntry } from '../common/attachments/chatVariableEntries.js';
 import { extractImagesFromChatRequest, extractImagesFromChatResponse, extractImagesFromChatVariables, IChatExtractedImage } from '../common/chatImageExtraction.js';
 import { IChatRequestViewModel, IChatResponseViewModel, isRequestVM, isResponseVM } from '../common/model/chatViewModel.js';
@@ -290,9 +292,41 @@ export class ChatImageCarouselService implements IChatImageCarouselService {
 		@IChatWidgetService private readonly chatWidgetService: IChatWidgetService,
 		@ICommandService private readonly commandService: ICommandService,
 		@IFileService private readonly fileService: IFileService,
+		@IEditorService private readonly editorService: IEditorService,
 	) { }
 
+	/**
+	 * The Images Preview viewer is an optional contribution and is not present in
+	 * every build. When its command is missing we must not call it: an unknown
+	 * command rejects and would surface as an error from an image click.
+	 */
+	private get isCarouselAvailable(): boolean {
+		return !!CommandsRegistry.getCommand(CAROUSEL_COMMAND);
+	}
+
+	/**
+	 * Best-effort replacement for the carousel when it is not contributed: open
+	 * the image itself in an editor. Data URIs have no editor input, so they are
+	 * simply ignored rather than raising an error.
+	 */
+	private async openWithoutCarousel(resource: URI): Promise<void> {
+		if (resource.scheme === Schemas.data) {
+			return;
+		}
+
+		try {
+			await this.editorService.openEditor({ resource, options: { pinned: true } });
+		} catch {
+			// The resource may not be openable in this window; nothing else to do.
+		}
+	}
+
 	async openCarouselAtResource(resource: URI, data?: Uint8Array, options?: { readonly preferCurrentInput?: boolean }): Promise<void> {
+		if (!this.isCarouselAvailable) {
+			await this.openWithoutCarousel(resource);
+			return;
+		}
+
 		const widget = this.chatWidgetService.lastFocusedWidget;
 		if (!widget?.viewModel) {
 			await this.openSingleImage(resource, data);
@@ -322,6 +356,11 @@ export class ChatImageCarouselService implements IChatImageCarouselService {
 	}
 
 	private async openSingleImage(resource: URI, data?: Uint8Array): Promise<void> {
+		if (!this.isCarouselAvailable) {
+			await this.openWithoutCarousel(resource);
+			return;
+		}
+
 		if (!data) {
 			const content = await this.fileService.readFile(resource);
 			data = content.value.buffer;

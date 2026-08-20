@@ -339,7 +339,9 @@ const excludedExtensions = [
 	'jake',
 	'julia',
 	'latex',
-	'log',
+	// NOTE: do not exclude 'log' — LOG_MODE_ID ('log') backs the Output panel /
+	// log viewer's syntax coloring and it is a `publisher: vscode` builtin with
+	// no marketplace equivalent to fall back on.
 	'lua',
 	'make',
 	'objective-c',
