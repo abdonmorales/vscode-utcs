@@ -99,14 +99,10 @@ import { TestMenuService } from '../workbenchTestServices.js';
 import { IAccessibilitySignalService } from '../../../../platform/accessibilitySignal/browser/accessibilitySignalService.js';
 import { IResolvedTextEditorModel, ITextModelService } from '../../../../editor/common/services/resolverService.js';
 // eslint-disable-next-line local/code-import-patterns
-import { AGENT_FEEDBACK_NEW_SESSION_RESOURCE, IAgentFeedbackService } from '../../../../sessions/contrib/agentFeedback/browser/agentFeedbackService.js';
 import { IChatEditingService } from '../../../contrib/chat/common/editing/chatEditingService.js';
 // eslint-disable-next-line local/code-import-patterns
-import { ISessionsManagementService } from '../../../../sessions/services/sessions/common/sessionsManagement.js';
 // eslint-disable-next-line local/code-import-patterns
-import { ISessionsService } from '../../../../sessions/services/sessions/browser/sessionsService.js';
 // eslint-disable-next-line local/code-import-patterns
-import { ICodeReviewService, PRReviewStateKind } from '../../../../sessions/contrib/codeReview/browser/codeReviewService.js';
 import { constObservable } from '../../../../base/common/observable.js';
 
 // Editor
@@ -628,68 +624,11 @@ export function createEditorServices(disposables: DisposableStore, options?: Cre
 
 	define(ITextModelService, FixtureTextModelService);
 
-	defineInstance(IAgentFeedbackService, {
-		_serviceBrand: undefined,
-		onDidChangeFeedback: Event.None,
-		onDidChangeFeedbackVisibility: Event.None,
-		onDidChangeNavigation: Event.None,
-		onDidChangeFeedbackScope: Event.None,
-		activeFeedbackSessionResource: constObservable(AGENT_FEEDBACK_NEW_SESSION_RESOURCE),
-		onDidAddFeedback: Event.None,
-		onDidConvertFeedback: Event.None,
-		onDidAddReply: Event.None,
-		onDidSubmitFeedback: Event.None,
-		onDidRevealSessionComment: Event.None,
-		addFeedback: () => undefined!,
-		removeFeedback: () => { },
-		updateFeedback: () => { },
-		acceptFeedback: () => { },
-		addReply: () => { },
-		getFeedback: () => [],
-		showFeedbackInEditor: () => { },
-		hideFeedbackInEditor: () => { },
-		getVisibleResolvedFeedbackIds: () => new Set(),
-		hasLoadedFeedback: () => true,
-		getSessionForFile: () => undefined,
-		getFeedbackSessionResource: () => undefined,
-		registerFeedbackResourceScope: () => toDisposable(() => { }),
-		getMostRecentSessionForResource: () => undefined,
-		revealFeedback: async () => { },
-		revealSessionComment: async () => { },
-		getNextFeedback: () => undefined,
-		getNextNavigableItem: () => undefined,
-		setNavigationAnchor: () => { },
-		getNavigationBearing: () => ({ activeIdx: -1, totalCount: 0 }),
-		clearFeedback: () => { },
-		markFeedbackSubmitted: () => { },
-		submitFeedback: async () => false,
-		addFeedbackAndSubmit: async () => { },
-		setFeedbackResolved: async () => { },
-	});
-
 	definePartialInstance(IChatEditingService, {
 		_serviceBrand: undefined,
 		editingSessionsObs: constObservable([]),
 		startOrContinueGlobalEditingSession: () => undefined!,
 		getEditingSession: () => undefined,
-	});
-
-	definePartialInstance(ISessionsManagementService, {
-		_serviceBrand: undefined,
-		getSession: () => undefined,
-		getSessions: () => [],
-	});
-
-	definePartialInstance(ISessionsService, {
-		_serviceBrand: undefined,
-		activeSession: constObservable(undefined),
-	});
-
-	definePartialInstance(ICodeReviewService, {
-		_serviceBrand: undefined,
-		getPRReviewState: () => constObservable({ kind: PRReviewStateKind.None }),
-		resolvePRReviewThread: async () => { },
-		markPRReviewCommentConverted: () => { },
 	});
 
 	// Allow additional services to override defaults

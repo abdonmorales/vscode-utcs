@@ -12,9 +12,12 @@ import { IStorageService, StorageScope } from '../../../../../platform/storage/c
 import { INotificationService, Severity } from '../../../../../platform/notification/common/notification.js';
 import { ILogService } from '../../../../../platform/log/common/log.js';
 import { localize } from '../../../../../nls.js';
-import { AgentsVoiceStorageKeys } from '../../../../contrib/agentsVoice/common/agentsVoice.js';
 import { createPcmCaptureNode } from '../pcmCaptureWorklet.js';
 import { mainWindow } from '../../../../../base/browser/window.js';
+
+// Storage key formerly exported by `contrib/agentsVoice` (removed from core along with the
+// rest of the bundled agent stack). Inlined here to keep the value stable for existing users.
+const MICROPHONE_DEVICE_STORAGE_KEY = 'agentsVoice.microphoneDevice';
 
 export const IMicCaptureService = createDecorator<IMicCaptureService>('micCaptureService');
 
@@ -400,7 +403,7 @@ export class MicCaptureService extends Disposable implements IMicCaptureService 
 
 	private async _startCapture(window: Window & typeof globalThis): Promise<void> {
 		const captureGeneration = this._captureGeneration;
-		const deviceId = this.storageService.get(AgentsVoiceStorageKeys.MicrophoneDevice, StorageScope.APPLICATION);
+		const deviceId = this.storageService.get(MICROPHONE_DEVICE_STORAGE_KEY, StorageScope.APPLICATION);
 		const audioConstraints: MediaTrackConstraints = {
 			channelCount: 1,
 			sampleRate: 16000,
