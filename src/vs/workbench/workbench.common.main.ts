@@ -229,6 +229,11 @@ import './contrib/speech/browser/speech.contribution.js';
 import './contrib/chat/browser/chat.shared.contribution.js';
 import './contrib/chat/browser/chat.contribution.js';
 import './contrib/chat/browser/agentSessions/agentHost/agentHost.contribution.js';
+import './contrib/inlineChat/browser/inlineChat.contribution.js';
+import './contrib/agentsVoice/browser/agentsVoice.contribution.js';
+import './contrib/mcp/browser/mcp.contribution.js';
+import './contrib/mcp/browser/mcp.view.contribution.js';
+import './contrib/remoteCodingAgents/browser/remoteCodingAgents.contribution.js';
 import './contrib/chat/browser/chat.view.contribution.js';
 
 // Copilot Voice

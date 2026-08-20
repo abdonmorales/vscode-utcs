@@ -107,6 +107,7 @@ import { EditorRemoteAgentHostServiceClient } from './services/agentHost/browser
 import { IRemoteAgentHostService, NullRemoteAgentHostService } from '../platform/agentHost/common/remoteAgentHostService.js';
 import { BrowserAgentHostDebugLogsExportService, IAgentHostDebugLogsExportService } from './contrib/chat/browser/actions/exportAgentHostDebugLogsAction.js';
 import './services/agentHost/browser/webAgentHostEnablementService.js';
+import './contrib/browserView/browser/browserView.contribution.js';
 
 registerSingleton(IWorkbenchExtensionManagementService, ExtensionManagementService, InstantiationType.Delayed);
 registerSingleton(IAccessibilityService, AccessibilityService, InstantiationType.Delayed);

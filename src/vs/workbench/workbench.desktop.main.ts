@@ -93,6 +93,7 @@ import '../platform/extensionManagement/electron-browser/extensionsProfileScanne
 import '../platform/sandbox/electron-browser/sandboxHelperService.js';
 import '../platform/webContentExtractor/electron-browser/webContentExtractorService.js';
 import '../platform/agentHost/browser/agentHostEnablementService.js';
+import './services/browserView/electron-browser/playwrightWorkbenchService.js';
 import './services/process/electron-browser/processService.js';
 import './services/power/electron-browser/powerService.js';
 
@@ -138,6 +139,15 @@ import './contrib/extensions/electron-browser/devtoolsExtensionHost.contribution
 
 // Issues
 import './contrib/issue/electron-browser/issue.contribution.js';
+
+// Browser View
+import './contrib/browserView/electron-browser/browserView.contribution.js';
+
+// Agents Voice
+import './contrib/agentsVoice/electron-browser/agentsVoiceNativeCommands.js';
+
+// MCP
+import './contrib/mcp/electron-browser/mcp.contribution.js';
 
 // Surveys
 
