@@ -89,11 +89,11 @@ jobs:
             gulp_task: vscode-reh-web-linux-arm64
             output_name: vscode-reh-web-linux-arm64
             node_bin: node
-          - os: macos-13
+          - os: macos-15-intel
             gulp_task: vscode-reh-web-darwin-x64
             output_name: vscode-reh-web-darwin-x64
             node_bin: node
-          - os: macos-latest
+          - os: macos-15
             gulp_task: vscode-reh-web-darwin-arm64
             output_name: vscode-reh-web-darwin-arm64
             node_bin: node
@@ -110,6 +110,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.resolve-tag.outputs.tag }}
+
+      - name: Pin Xcode version (avoid std::optional build failures on newer SDKs)
+        if: runner.os == 'macOS'
+        run: |
+          # Several native addons this repo depends on (@parcel/watcher,
+          # @vscode/policy-watcher, ...) use std::optional without an
+          # explicit #include <optional>. Xcode 26's libc++ headers no
+          # longer transitively pull that in the way older SDKs did, so
+          # from-source builds of those addons fail on the current
+          # macos-latest image. Pin to a known-good Xcode 16.x, confirmed
+          # present at this exact path on both macos-15 and macos-15-intel.
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          xcodebuild -version
 
       - name: Read Node version from .nvmrc
         id: nvmrc
