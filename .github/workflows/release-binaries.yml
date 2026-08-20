@@ -101,7 +101,6 @@ jobs:
             gulp_task: vscode-reh-web-win32-x64
             output_name: vscode-reh-web-win32-x64
             node_bin: node.exe
-            vs2022_install: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -125,16 +124,30 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libkrb5-dev libxkbfile-dev libx11-dev
 
+      - name: Locate Visual Studio (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # build/npm/preinstall.ts does its own VS detection ahead of
+          # node-gyp's own, and only trusts a `vsNNNN_install` env var or a
+          # fixed set of default Program Files paths - neither reliably
+          # matches what's actually on the runner image (edition/version
+          # naming drifts over time). vswhere.exe is the tool Visual Studio
+          # itself ships specifically to answer "where is VS actually
+          # installed" and is guaranteed present on GitHub's Windows
+          # runners, so use it instead of guessing a path.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) {
+            throw "vswhere could not find a Visual Studio install with the C++ (VC.Tools.x86.x64) component"
+          }
+          Write-Host "Found Visual Studio at: $vsPath"
+          "vs2022_install=$vsPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: Install dependencies
         run: npm ci
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-          # build/npm/preinstall.ts does its own (stricter, path-based) VS
-          # detection ahead of node-gyp's own - point it at the VS2022
-          # Enterprise install GitHub's windows-latest runner image ships
-          # (see actions/runner-images) since its default-path probing
-          # doesn't reliably find it.
-          vs2022_install: ${{ matrix.vs2022_install }}
 
       - name: Download built-in extensions
         run: npm run download-builtin-extensions
