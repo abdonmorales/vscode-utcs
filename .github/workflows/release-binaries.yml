@@ -1,0 +1,138 @@
+name: Build and Publish Release Binaries
+
+# Builds the vscode-reh-web server binary (this fork's primary target - a
+# lightweight, extension-host-compatible VS Code that serves the workbench UI
+# to a browser instead of bundling Electron/Chromium) for Linux, macOS, and
+# Windows, on both x64 and arm64 where GitHub provides a native runner, and
+# attaches each as a downloadable asset on a GitHub Release.
+#
+# Runs on GitHub-hosted runners, which have normal internet access - unlike the
+# sandboxed environment this workflow was originally authored in, so none of
+# the .npmrc/kerberos/GITHUB_TOKEN workarounds documented in this repo's commit
+# history should be necessary here.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build and attach binaries to (defaults to the latest release if omitted)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  resolve-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Resolve target tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            LATEST_TAG=$(gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName)
+            echo "tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    needs: resolve-tag
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            gulp_task: vscode-reh-web-linux-x64
+            output_name: vscode-reh-web-linux-x64
+            node_bin: node
+          - os: ubuntu-24.04-arm
+            gulp_task: vscode-reh-web-linux-arm64
+            output_name: vscode-reh-web-linux-arm64
+            node_bin: node
+          - os: macos-13
+            gulp_task: vscode-reh-web-darwin-x64
+            output_name: vscode-reh-web-darwin-x64
+            node_bin: node
+          - os: macos-latest
+            gulp_task: vscode-reh-web-darwin-arm64
+            output_name: vscode-reh-web-darwin-arm64
+            node_bin: node
+          - os: windows-latest
+            gulp_task: vscode-reh-web-win32-x64
+            output_name: vscode-reh-web-win32-x64
+            node_bin: node.exe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout at target tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-tag.outputs.tag }}
+
+      - name: Read Node version from .nvmrc
+        id: nvmrc
+        run: echo "version=$(cat .nvmrc)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.nvmrc.outputs.version }}
+
+      - name: Install native module build dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libkrb5-dev libxkbfile-dev libx11-dev
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Download built-in extensions
+        run: npm run download-builtin-extensions
+
+      - name: Type-check
+        run: npm run typecheck-client
+
+      - name: Build ${{ matrix.gulp_task }}
+        run: npm run gulp ${{ matrix.gulp_task }}
+
+      - name: Smoke-test the built server
+        run: |
+          OUT_DIR="$(dirname "$PWD")/${{ matrix.output_name }}"
+          "$OUT_DIR/${{ matrix.node_bin }}" "$OUT_DIR/out/server-main.js" \
+            --host 127.0.0.1 --port 9999 \
+            --without-connection-token --accept-server-license-terms &
+          SERVER_PID=$!
+          sleep 8
+          STATUS=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:9999/ --max-time 10)
+          kill "$SERVER_PID" 2>/dev/null || true
+          if [ "$STATUS" != "200" ]; then
+            echo "Smoke test failed: server returned HTTP $STATUS"
+            exit 1
+          fi
+          echo "Smoke test passed: HTTP $STATUS"
+
+      - name: Package binary
+        id: package
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          ARCHIVE="vscode-utcs-${{ matrix.output_name }}-${VERSION}.tar.gz"
+          tar -czf "$ARCHIVE" -C "$(dirname "$PWD")" "${{ matrix.output_name }}"
+          sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload binary to the release
+        run: gh release upload "${{ needs.resolve-tag.outputs.tag }}" "${{ steps.package.outputs.archive }}" "${{ steps.package.outputs.archive }}.sha256" --clobber --repo "${{ github.repository }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
