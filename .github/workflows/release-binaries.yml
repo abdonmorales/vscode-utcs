@@ -1,40 +1,30 @@
 name: Build and Publish Release Binaries
 
-# Builds the vscode-reh-web server binary (this fork's primary target - a
-# lightweight, extension-host-compatible VS Code that serves the workbench UI
-# to a browser instead of bundling Electron/Chromium) for Linux, macOS, and
-# Windows, on both x64 and arm64 where GitHub provides a native runner, and
-# attaches each as a downloadable asset on a GitHub Release.
+# Builds the VSCode-UTCS *desktop* (Electron) app and publishes real
+# installers as GitHub Release assets:
 #
-# Triggers on pushing a version tag (`v*`) - this is a ref-based event, so it
-# fires regardless of which branch the tagged commit lives on. It does NOT
-# require this workflow file to be on the repository's default branch, which
-# matters here: `main` is kept as a clean mirror for pulling in upstream
-# fixes, and all fork-specific work (including this workflow) lives on the
-# dev branch instead. If no release exists yet for the pushed tag, one is
-# created automatically before assets are uploaded to it.
+#   Windows  -> .exe   (Inno Setup user-installer)
+#   macOS    -> .dmg   (from the built .app bundle)
+#   Linux    -> .AppImage
 #
-# `release: published` and manual `workflow_dispatch` are also wired up as
-# convenience triggers, but note GitHub only auto-fires `release` events for
-# workflow files that exist on the default branch - on a non-default branch,
-# use workflow_dispatch (Actions tab -> this workflow -> Run workflow, with
-# the branch selector) or just push a tag, which works from any branch.
+# Triggers on pushing a version tag (`v*`). That is a ref-based event, so it
+# fires regardless of which branch the tagged commit lives on and does NOT
+# require this file to be on the default branch - `main` here is kept as a
+# clean mirror for pulling upstream fixes, while fork work lives on the dev
+# branch. If no release exists for the tag yet, one is created first.
 #
-# Runs on GitHub-hosted runners, which have normal internet access - unlike the
-# sandboxed environment this workflow was originally authored in, so none of
-# the .npmrc/kerberos/GITHUB_TOKEN workarounds documented in this repo's commit
-# history should be necessary here.
+# Note on packaging coverage: upstream VS Code only ships gulp tasks for
+# .exe (Inno Setup) and Linux deb/rpm/snap. It has no AppImage or dmg task,
+# so those two are assembled here from the plain build output.
 
 on:
   push:
     tags:
       - 'v*'
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to build and attach binaries to (defaults to the latest release if omitted)'
+        description: 'Tag to build and attach installers to (defaults to the latest release)'
         required: false
         type: string
 
@@ -54,8 +44,6 @@ jobs:
             TAG="${{ inputs.tag }}"
           elif [ "${{ github.event_name }}" = "push" ]; then
             TAG="${{ github.ref_name }}"
-          elif [ -n "${{ github.event.release.tag_name }}" ]; then
-            TAG="${{ github.event.release.tag_name }}"
           else
             TAG=$(gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName)
           fi
@@ -67,10 +55,7 @@ jobs:
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
           if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            echo "No release found for $TAG yet - creating one."
             gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --generate-notes
-          else
-            echo "Release $TAG already exists."
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -81,26 +66,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            gulp_task: vscode-reh-web-linux-x64
-            output_name: vscode-reh-web-linux-x64
-            node_bin: node
-          - os: ubuntu-24.04-arm
-            gulp_task: vscode-reh-web-linux-arm64
-            output_name: vscode-reh-web-linux-arm64
-            node_bin: node
-          - os: macos-15-intel
-            gulp_task: vscode-reh-web-darwin-x64
-            output_name: vscode-reh-web-darwin-x64
-            node_bin: node
-          - os: macos-15
-            gulp_task: vscode-reh-web-darwin-arm64
-            output_name: vscode-reh-web-darwin-arm64
-            node_bin: node
           - os: windows-latest
-            gulp_task: vscode-reh-web-win32-x64
-            output_name: vscode-reh-web-win32-x64
-            node_bin: node.exe
+            gulp_task: vscode-win32-x64
+            build_dir: VSCode-win32-x64
+            kind: exe
+          - os: macos-15
+            gulp_task: vscode-darwin-arm64
+            build_dir: VSCode-darwin-arm64
+            kind: dmg
+          - os: macos-15-intel
+            gulp_task: vscode-darwin-x64
+            build_dir: VSCode-darwin-x64
+            kind: dmg
+          - os: ubuntu-latest
+            gulp_task: vscode-linux-x64
+            build_dir: VSCode-linux-x64
+            kind: appimage
+            appimage_arch: x86_64
+          - os: ubuntu-24.04-arm
+            gulp_task: vscode-linux-arm64
+            build_dir: VSCode-linux-arm64
+            kind: appimage
+            appimage_arch: aarch64
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -114,11 +101,7 @@ jobs:
       - name: Pin Xcode version
         if: runner.os == 'macOS'
         run: |
-          # Pin a known-good Xcode (confirmed present at this exact path on
-          # both macos-15 and macos-15-intel) so the toolchain is deterministic
-          # rather than whatever the image's rotating default happens to be.
-          # The C++ standard itself is fixed via force_process_config in the
-          # .npmrc files - see the note there.
+          # Deterministic toolchain rather than the image's rotating default.
           sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
           xcodebuild -version
 
@@ -133,25 +116,19 @@ jobs:
 
       - name: Install native module build dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libkrb5-dev libxkbfile-dev libx11-dev
+        run: sudo apt-get update && sudo apt-get install -y libkrb5-dev libxkbfile-dev libx11-dev libsecret-1-dev fakeroot
 
       - name: Locate Visual Studio (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           # build/npm/preinstall.ts does its own VS detection ahead of
-          # node-gyp's own, and only trusts a `vsNNNN_install` env var or a
-          # fixed set of default Program Files paths - neither reliably
-          # matches what's actually on the runner image (edition/version
-          # naming drifts over time). vswhere.exe is the tool Visual Studio
-          # itself ships specifically to answer "where is VS actually
-          # installed" and is guaranteed present on GitHub's Windows
-          # runners, so use it instead of guessing a path.
+          # node-gyp's and only trusts a vsNNNN_install env var or a fixed set
+          # of default paths. vswhere.exe is what Visual Studio ships to answer
+          # "where is VS actually installed" and is present on GitHub runners.
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if (-not $vsPath) {
-            throw "vswhere could not find a Visual Studio install with the C++ (VC.Tools.x86.x64) component"
-          }
+          if (-not $vsPath) { throw "vswhere could not find a Visual Studio install with the C++ tools" }
           Write-Host "Found Visual Studio at: $vsPath"
           "vs2022_install=$vsPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
@@ -169,37 +146,97 @@ jobs:
       - name: Build ${{ matrix.gulp_task }}
         run: npm run gulp ${{ matrix.gulp_task }}
 
-      - name: Smoke-test the built server
+      # ---------------------------------------------------------------- Windows
+      - name: Build Windows installer (.exe)
+        if: matrix.kind == 'exe'
+        id: exe
         run: |
-          # Run from inside the output directory and use relative paths. On
-          # Windows the shell is Git Bash but node.exe is a native Windows
-          # binary, so an absolute POSIX path like /d/a/... goes through MSYS
-          # path translation before node ever sees it; relative paths sidestep
-          # that entirely and behave identically on Linux and macOS.
-          cd "$(dirname "$PWD")/${{ matrix.output_name }}"
-          ./${{ matrix.node_bin }} out/server-main.js \
-            --host 127.0.0.1 --port 9999 \
-            --without-connection-token --accept-server-license-terms &
-          SERVER_PID=$!
-          sleep 8
-          STATUS=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:9999/ --max-time 10)
-          kill "$SERVER_PID" 2>/dev/null || true
-          if [ "$STATUS" != "200" ]; then
-            echo "Smoke test failed: server returned HTTP $STATUS"
-            exit 1
-          fi
-          echo "Smoke test passed: HTTP $STATUS"
-
-      - name: Package binary
-        id: package
-        run: |
+          # The setup task does not chain the build; it reads the already-built
+          # ../VSCode-win32-x64 and emits into .build/win32-x64/user-setup.
+          npm run gulp vscode-win32-x64-user-setup
           VERSION="$(node -p "require('./package.json').version")"
-          ARCHIVE="vscode-utcs-${{ matrix.output_name }}-${VERSION}.tar.gz"
-          tar -czf "$ARCHIVE" -C "$(dirname "$PWD")" "${{ matrix.output_name }}"
-          sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
-          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          SRC="$(find .build/win32-x64/user-setup -name '*.exe' -print -quit)"
+          if [ -z "$SRC" ]; then echo "No installer produced"; ls -R .build/win32-x64 || true; exit 1; fi
+          ARTIFACT="VSCode-UTCS-${VERSION}-win32-x64-user-setup.exe"
+          mv "$SRC" "$ARTIFACT"
+          echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
-      - name: Upload binary to the release
-        run: gh release upload "${{ needs.resolve-tag.outputs.tag }}" "${{ steps.package.outputs.archive }}" "${{ steps.package.outputs.archive }}.sha256" --clobber --repo "${{ github.repository }}"
+      # ------------------------------------------------------------------ macOS
+      - name: Build macOS disk image (.dmg)
+        if: matrix.kind == 'dmg'
+        id: dmg
+        run: |
+          # Upstream has no dmg task, so build one from the .app with hdiutil
+          # (part of macOS - no extra tooling required).
+          APP="$(find "$(dirname "$PWD")/${{ matrix.build_dir }}" -maxdepth 1 -name '*.app' -print -quit)"
+          if [ -z "$APP" ]; then echo "No .app bundle found"; ls -la "$(dirname "$PWD")/${{ matrix.build_dir }}" || true; exit 1; fi
+          echo "Found app bundle: $APP"
+          VERSION="$(node -p "require('./package.json').version")"
+          ARCH="$([ "${{ matrix.gulp_task }}" = "vscode-darwin-arm64" ] && echo arm64 || echo x64)"
+          ARTIFACT="VSCode-UTCS-${VERSION}-darwin-${ARCH}.dmg"
+          STAGE="$(mktemp -d)/VSCode-UTCS"
+          mkdir -p "$STAGE"
+          cp -R "$APP" "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+          hdiutil create -volname "VSCode-UTCS" -srcfolder "$STAGE" -ov -format UDZO "$ARTIFACT"
+          echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
+
+      # ------------------------------------------------------------------ Linux
+      - name: Build Linux AppImage
+        if: matrix.kind == 'appimage'
+        id: appimage
+        run: |
+          # Upstream ships deb/rpm/snap but no AppImage, so assemble an AppDir
+          # from the plain build output and package it with appimagetool.
+          set -euo pipefail
+          BUILD="$(dirname "$PWD")/${{ matrix.build_dir }}"
+          APPNAME="$(node -p "require('./product.json').applicationName")"
+          NAMELONG="$(node -p "require('./product.json').nameLong")"
+          NAMESHORT="$(node -p "require('./product.json').nameShort")"
+          VERSION="$(node -p "require('./package.json').version")"
+
+          APPDIR="$PWD/AppDir"
+          mkdir -p "$APPDIR"
+          cp -a "$BUILD"/. "$APPDIR"/
+
+          # Desktop entry - resources/linux/code.desktop is a template.
+          sed -e "s|@@NAME_LONG@@|${NAMELONG}|g" \
+              -e "s|@@NAME_SHORT@@|${NAMESHORT}|g" \
+              -e "s|@@NAME@@|${APPNAME}|g" \
+              -e "s|@@EXEC@@|${APPNAME}|g" \
+              -e "s|@@ICON@@|${APPNAME}|g" \
+              resources/linux/code.desktop > "$APPDIR/${APPNAME}.desktop"
+          cp resources/linux/code.png "$APPDIR/${APPNAME}.png"
+
+          # Electron's SUID sandbox helper cannot be used from inside an
+          # AppImage (the extracted mount is not setuid), so disable it.
+          cat > "$APPDIR/AppRun" <<APPRUN
+          #!/bin/sh
+          HERE="\$(dirname "\$(readlink -f "\$0")")"
+          exec "\$HERE/${APPNAME}" --no-sandbox "\$@"
+          APPRUN
+          chmod +x "$APPDIR/AppRun"
+
+          TOOL_ARCH="${{ matrix.appimage_arch }}"
+          curl -fsSL -o appimagetool \
+            "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${TOOL_ARCH}.AppImage"
+          chmod +x appimagetool
+
+          ARTIFACT="VSCode-UTCS-${VERSION}-linux-${TOOL_ARCH}.AppImage"
+          # --appimage-extract-and-run avoids needing FUSE on the runner.
+          ARCH="$TOOL_ARCH" ./appimagetool --appimage-extract-and-run "$APPDIR" "$ARTIFACT"
+          echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------------------------------- Upload
+      - name: Checksum and upload to the release
+        run: |
+          ARTIFACT="${{ steps.exe.outputs.artifact }}${{ steps.dmg.outputs.artifact }}${{ steps.appimage.outputs.artifact }}"
+          if [ -z "$ARTIFACT" ] || [ ! -f "$ARTIFACT" ]; then
+            echo "Expected installer '$ARTIFACT' was not produced"; exit 1
+          fi
+          sha256sum "$ARTIFACT" > "$ARTIFACT.sha256"
+          ls -lh "$ARTIFACT"
+          gh release upload "${{ needs.resolve-tag.outputs.tag }}" \
+            "$ARTIFACT" "$ARTIFACT.sha256" --clobber --repo "${{ github.repository }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
