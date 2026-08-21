@@ -531,6 +531,25 @@ function packageTask(type: string, platform: string, arch: string, sourceFolderN
 	};
 }
 
+/**
+ * rcedit only understands Windows PE images. Several dependencies (node-pty,
+ * @parcel/watcher, ...) ship prebuilds for *every* platform in the same
+ * package, so a `**\/*.node` glob over the packaged output also picks up Linux
+ * ELF and macOS Mach-O binaries, which rcedit rejects with
+ * "Unable to load file". Detect a PE by its `MZ` magic instead of maintaining
+ * a per-package ignore list, which only covers the packages someone has
+ * already been burned by.
+ */
+async function isWindowsPortableExecutable(filePath: string): Promise<boolean> {
+	const handle = await fs.promises.open(filePath, 'r');
+	try {
+		const { bytesRead, buffer } = await handle.read(Buffer.alloc(2), 0, 2, 0);
+		return bytesRead === 2 && buffer[0] === 0x4d /* M */ && buffer[1] === 0x5a /* Z */;
+	} finally {
+		await handle.close();
+	}
+}
+
 function hasAuthenticodeSignature(filePath: string): Promise<boolean> {
 	return new Promise((resolve, reject) => {
 		const proc = cp.spawn('signtool.exe', ['verify', '/pa', filePath]);
@@ -589,6 +608,10 @@ function patchWin32DependenciesTask(destinationFolderName: string) {
 		const patchPromises = deps.map<Promise<unknown>>(async dep => {
 			const basename = path.basename(dep);
 			const fullPath = path.join(cwd, dep);
+
+			if (!await isWindowsPortableExecutable(fullPath)) {
+				return; // cross-platform prebuild (ELF/Mach-O) - nothing to stamp
+			}
 
 			await stripAuthenticodeSignature(fullPath);
 			await rcedit(fullPath, {

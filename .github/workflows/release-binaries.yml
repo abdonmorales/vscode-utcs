@@ -171,8 +171,13 @@ jobs:
 
       - name: Smoke-test the built server
         run: |
-          OUT_DIR="$(dirname "$PWD")/${{ matrix.output_name }}"
-          "$OUT_DIR/${{ matrix.node_bin }}" "$OUT_DIR/out/server-main.js" \
+          # Run from inside the output directory and use relative paths. On
+          # Windows the shell is Git Bash but node.exe is a native Windows
+          # binary, so an absolute POSIX path like /d/a/... goes through MSYS
+          # path translation before node ever sees it; relative paths sidestep
+          # that entirely and behave identically on Linux and macOS.
+          cd "$(dirname "$PWD")/${{ matrix.output_name }}"
+          ./${{ matrix.node_bin }} out/server-main.js \
             --host 127.0.0.1 --port 9999 \
             --without-connection-token --accept-server-license-terms &
           SERVER_PID=$!
