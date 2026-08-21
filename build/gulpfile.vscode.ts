@@ -281,12 +281,15 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 			.pipe(rename(function (path) { path.dirname = path.dirname!.replace(new RegExp('^' + out), 'out'); }))
 			.pipe(util.setExecutableBit(['**/*.sh']));
 
-		const platformSpecificBuiltInExtensionsExclusions = product.builtInExtensions.filter(ext => {
-			if (!(ext as { platforms?: string[] }).platforms) {
+		// Typed explicitly because product.json's builtInExtensions list is empty
+		// in this fork, which would otherwise infer as never[].
+		const builtInExtensions: { name: string; platforms?: string[] }[] = product.builtInExtensions;
+		const platformSpecificBuiltInExtensionsExclusions = builtInExtensions.filter(ext => {
+			if (!ext.platforms) {
 				return false;
 			}
 
-			const set = new Set((ext as { platforms?: string[] }).platforms);
+			const set = new Set(ext.platforms);
 			return !set.has(platform);
 		}).map(ext => `!.build/extensions/${ext.name}/**`);
 
@@ -588,7 +591,17 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 function hasAuthenticodeSignature(filePath: string): Promise<boolean> {
 	return new Promise((resolve, reject) => {
 		const proc = cp.spawn('signtool.exe', ['verify', '/pa', filePath]);
-		proc.on('error', reject);
+		proc.on('error', (err: NodeJS.ErrnoException) => {
+			// signtool.exe ships with the Windows SDK and is not on PATH in every
+			// build environment. Stripping only exists to keep ESRP's `signtool /as`
+			// happy on officially signed builds, so when signtool is unavailable
+			// there is nothing to strip - report "unsigned" instead of failing.
+			if (err.code === 'ENOENT') {
+				resolve(false);
+			} else {
+				reject(err);
+			}
+		});
 		proc.on('exit', code => resolve(code === 0));
 	});
 }
