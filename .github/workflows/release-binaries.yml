@@ -111,37 +111,16 @@ jobs:
         with:
           ref: ${{ needs.resolve-tag.outputs.tag }}
 
-      - name: Configure macOS native-module toolchain
+      - name: Pin Xcode version
         if: runner.os == 'macOS'
         run: |
           # Pin a known-good Xcode (confirmed present at this exact path on
           # both macos-15 and macos-15-intel) so the toolchain is deterministic
           # rather than whatever the image's rotating default happens to be.
+          # The C++ standard itself is fixed via force_process_config in the
+          # .npmrc files - see the note there.
           sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
           xcodebuild -version
-
-          # Force the C++ standard for node-gyp builds on macOS.
-          #
-          # Root cause of every macOS `npm ci` failure in this workflow so far
-          # (@parcel/watcher, @vscode/policy-watcher, @vscode/fs-copyfile):
-          # node's common.gypi only sets CLANG_CXX_LANGUAGE_STANDARD (gnu++20)
-          # inside a `['clang==1', ...]` condition, `clang%` defaults to 0, and
-          # node-gyp never passes -Dclang=1 - so on macOS no -std= flag reaches
-          # the compiler at all and Apple clang falls back to gnu++98. That is
-          # why the errors looked like "no template named 'optional' in
-          # namespace 'std'" and "rvalue references are a C++11 extension":
-          # not a missing #include, just a pre-C++11 dialect. Linux is
-          # unaffected because common.gypi sets -std=gnu++20 directly in
-          # cflags_cc on that path, which is why only macOS ever broke.
-          #
-          # gyp's make generator emits:
-          #   CXXFLAGS.target ?= $(CPPFLAGS) $(CXXFLAGS)
-          #   cmd_cxx = $(CXX...) ... $(GYP_CXXFLAGS) $(DEPFLAGS) $(CXXFLAGS.$(TOOLSET)) -c
-          # so an exported CXXFLAGS is appended last and its -std= wins over
-          # anything gyp computed (verified against gyp's make.py and by
-          # reproducing the override locally). gnu++20 matches what
-          # common.gypi intends and what node 24's V8 headers require.
-          echo "CXXFLAGS=-std=gnu++20" >> "$GITHUB_ENV"
 
       - name: Read Node version from .nvmrc
         id: nvmrc
