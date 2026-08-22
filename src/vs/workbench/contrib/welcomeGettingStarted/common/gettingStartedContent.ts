@@ -215,7 +215,7 @@ export const startEntries: GettingStartedStartEntryContent = [
 		title: localize('gettingStarted.newWorkspaceChat.title', "Generate New Workspace..."),
 		description: localize('gettingStarted.newWorkspaceChat.description', "Chat to create a new workspace"),
 		icon: Codicon.chatSparkle,
-		when: '!isWeb && !chatSetupHidden && !chatSetupDisabledInWorkspace',
+		when: product.defaultChatAgent ? '!isWeb && !chatSetupHidden && !chatSetupDisabledInWorkspace' : 'false',
 		content: {
 			type: 'startEntry',
 			command: 'command:welcome.newWorkspaceChat',
@@ -262,10 +262,18 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 		content: {
 			type: 'steps',
 			steps: [
-				createCopilotSetupStep('CopilotSetupAnonymous', CopilotAnonymousButton, 'chatAnonymous && !chatSetupCompleted', true),
-				createCopilotSetupStep('CopilotSetupSignedOut', CopilotSignedOutButton, 'chatEntitlementSignedOut && !chatAnonymous && !github.copilot.hasByokModels', false),
-				createCopilotSetupStep('CopilotSetupComplete', CopilotCompleteButton, 'chatSetupCompleted && !chatSetupDisabled && (chatAnonymous || chatPlanPro || chatPlanProPlus || chatPlanMax || chatPlanBusiness || chatPlanEnterprise || chatPlanFree)', false),
-				createCopilotSetupStep('CopilotSetupSignedIn', CopilotSignedInButton, '!chatEntitlementSignedOut && (!chatSetupCompleted || chatSetupDisabled || chatPlanCanSignUp)', false),
+				// Setting up the default chat agent only makes sense when the
+				// product configures one. These steps guard on chat entitlement
+				// context keys, but those are never bound without an agent, and
+				// their bare-string `when` form reads an unbound key as true -
+				// so they would otherwise render and offer a button bound to a
+				// command that is never registered.
+				...(product.defaultChatAgent ? [
+					createCopilotSetupStep('CopilotSetupAnonymous', CopilotAnonymousButton, 'chatAnonymous && !chatSetupCompleted', true),
+					createCopilotSetupStep('CopilotSetupSignedOut', CopilotSignedOutButton, 'chatEntitlementSignedOut && !chatAnonymous && !github.copilot.hasByokModels', false),
+					createCopilotSetupStep('CopilotSetupComplete', CopilotCompleteButton, 'chatSetupCompleted && !chatSetupDisabled && (chatAnonymous || chatPlanPro || chatPlanProPlus || chatPlanMax || chatPlanBusiness || chatPlanEnterprise || chatPlanFree)', false),
+					createCopilotSetupStep('CopilotSetupSignedIn', CopilotSignedInButton, '!chatEntitlementSignedOut && (!chatSetupCompleted || chatSetupDisabled || chatPlanCanSignUp)', false),
+				] : []),
 				{
 					id: 'pickColorTheme',
 					title: localize('gettingStarted.pickColor.title', "Choose your theme"),

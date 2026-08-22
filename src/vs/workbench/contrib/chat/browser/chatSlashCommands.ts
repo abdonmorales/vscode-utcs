@@ -155,7 +155,9 @@ export class ChatSlashCommandsContribution extends Disposable {
 				silent: true,
 				locations: [ChatAgentLocation.Chat],
 			}, async () => {
-				await commandService.executeCommand('github.copilot.debug.showChatLogView');
+				// Provided by the Copilot extension, which this product does not
+				// ship; fail quietly rather than surfacing a rejection.
+				await commandService.executeCommand('github.copilot.debug.showChatLogView').catch(() => { });
 			}));
 		}
 		this._store.add(slashCommandService.registerSlashCommand({

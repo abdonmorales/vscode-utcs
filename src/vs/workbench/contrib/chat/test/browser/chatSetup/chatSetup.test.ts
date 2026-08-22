@@ -28,11 +28,16 @@ suite('buildUpgradeUrlWithRedirect', () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
+	// This product ships no default chat agent, so the extension id is supplied
+	// explicitly rather than read off the product configuration.
+	const chatExtensionId = 'GitHub.copilot-chat';
+
 	test('stable quality uses vscode.dev host', () => {
 		const result = buildUpgradeUrlWithRedirect(
 			'https://github.com/github-copilot/upgrade?utm_source=vscode',
 			'vscode',
-			'stable'
+			'stable',
+			chatExtensionId
 		);
 		const { redirectHost, vscodeUri } = parseRedirectUrl(result);
 		assert.strictEqual(redirectHost, 'vscode.dev');
@@ -43,7 +48,8 @@ suite('buildUpgradeUrlWithRedirect', () => {
 		const result = buildUpgradeUrlWithRedirect(
 			'https://github.com/github-copilot/upgrade?utm_source=vscode',
 			'vscode-insiders',
-			'insider'
+			'insider',
+			chatExtensionId
 		);
 		const { redirectHost, vscodeUri } = parseRedirectUrl(result);
 		assert.strictEqual(redirectHost, 'insiders.vscode.dev');
@@ -54,7 +60,8 @@ suite('buildUpgradeUrlWithRedirect', () => {
 		const result = buildUpgradeUrlWithRedirect(
 			'https://github.com/github-copilot/upgrade?utm_source=vscode',
 			'code-oss',
-			undefined
+			undefined,
+			chatExtensionId
 		);
 		const { redirectHost, vscodeUri } = parseRedirectUrl(result);
 		assert.strictEqual(redirectHost, 'insiders.vscode.dev');
@@ -65,7 +72,8 @@ suite('buildUpgradeUrlWithRedirect', () => {
 		const result = buildUpgradeUrlWithRedirect(
 			'https://github.com/github-copilot/upgrade?utm_source=vscode',
 			'vscode',
-			'stable'
+			'stable',
+			chatExtensionId
 		);
 		assert.ok(result.startsWith('https://github.com/github-copilot/upgrade?utm_source=vscode&return_to='));
 	});
@@ -74,7 +82,8 @@ suite('buildUpgradeUrlWithRedirect', () => {
 		const result = buildUpgradeUrlWithRedirect(
 			'https://github.com/github-copilot/upgrade',
 			'vscode',
-			'stable'
+			'stable',
+			chatExtensionId
 		);
 		assert.ok(result.startsWith('https://github.com/github-copilot/upgrade?return_to='));
 	});
@@ -83,7 +92,8 @@ suite('buildUpgradeUrlWithRedirect', () => {
 		const result = buildUpgradeUrlWithRedirect(
 			'https://github.example.com/github-copilot/upgrade?utm_source=vscode',
 			'vscode',
-			'stable'
+			'stable',
+			chatExtensionId
 		);
 		assert.ok(result.startsWith('https://github.example.com/github-copilot/upgrade?utm_source=vscode&return_to='));
 		const { vscodeUri } = parseRedirectUrl(result);

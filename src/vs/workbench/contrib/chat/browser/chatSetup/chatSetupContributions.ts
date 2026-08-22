@@ -727,6 +727,9 @@ class ChatSetupExtensionUrlHandler implements IExtensionUrlHandlerOverride {
 	) { }
 
 	canHandleURL(url: URI): boolean {
+		if (!defaultChat.chatExtensionId) {
+			return false; // no default chat agent, so nothing to claim
+		}
 		return url.scheme === this.productService.urlProtocol && equalsIgnoreCase(url.authority, defaultChat.chatExtensionId);
 	}
 

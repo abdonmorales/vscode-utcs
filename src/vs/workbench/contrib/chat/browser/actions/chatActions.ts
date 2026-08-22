@@ -1167,7 +1167,12 @@ export function registerChatActions() {
 		}
 	});
 
-	const nonEnterpriseCopilotUsers = ContextKeyExpr.and(ChatContextKeys.enabled, ContextKeyExpr.notEquals(`config.${defaultChat.completionsAdvancedSetting}.authProvider`, defaultChat.provider.enterprise.id));
+	// Without a default chat agent there is no advanced-settings prefix, and
+	// `config..authProvider` is not a real setting key - it would read as
+	// "not enterprise" for everyone and unconditionally show these entries.
+	const nonEnterpriseCopilotUsers = defaultChat.completionsAdvancedSetting
+		? ContextKeyExpr.and(ChatContextKeys.enabled, ContextKeyExpr.notEquals(`config.${defaultChat.completionsAdvancedSetting}.authProvider`, defaultChat.provider.enterprise.id))
+		: ContextKeyExpr.false();
 	registerAction2(class extends Action2 {
 		constructor() {
 			super({
@@ -1209,7 +1214,9 @@ export function registerChatActions() {
 				title: localize2('showCopilotUsageExtensions', "Show Extensions using Copilot"),
 				f1: true,
 				category: EXTENSIONS_CATEGORY,
-				precondition: ChatContextKeys.enabled
+				// Names the default chat agent, so it is only meaningful when
+				// the product configures one.
+				precondition: product.defaultChatAgent ? ChatContextKeys.enabled : ContextKeyExpr.false()
 			});
 		}
 
@@ -1239,6 +1246,9 @@ export function registerChatActions() {
 		}
 
 		override async run(accessor: ServicesAccessor): Promise<void> {
+			if (!defaultChat.completionsMenuCommand) {
+				return; // no default chat agent, so no completions menu to open
+			}
 			const commandService = accessor.get(ICommandService);
 			commandService.executeCommand(defaultChat.completionsMenuCommand);
 		}

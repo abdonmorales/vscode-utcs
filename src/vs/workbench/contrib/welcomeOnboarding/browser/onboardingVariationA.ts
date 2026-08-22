@@ -10,7 +10,6 @@ import { isCancellationError } from '../../../../base/common/errors.js';
 import { StopWatch } from '../../../../base/common/stopwatch.js';
 import { URI } from '../../../../base/common/uri.js';
 import { isWindows, isMacintosh, isLinux } from '../../../../base/common/platform.js';
-import { assertDefined } from '../../../../base/common/types.js';
 import { FileAccess } from '../../../../base/common/network.js';
 import { ILayoutService } from '../../../../platform/layout/browser/layoutService.js';
 import { KeyCode } from '../../../../base/common/keyCodes.js';
@@ -77,7 +76,6 @@ type OnboardingActionEvent = {
 
 type EnterpriseSignInUiState = 'options' | 'instance' | 'progress';
 
-assertDefined(product.defaultChatAgent, 'Onboarding requires a default chat agent product configuration.');
 const defaultChat = product.defaultChatAgent;
 
 /**
@@ -116,7 +114,9 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 	private _footerSignInBtn: HTMLButtonElement | undefined;
 
 	private currentStepIndex = 0;
-	private readonly steps = ONBOARDING_STEPS;
+	// Without a default chat agent there is no account to sign in to, so the
+	// sign-in step is dropped and onboarding goes straight to personalization.
+	private readonly steps = defaultChat ? ONBOARDING_STEPS : ONBOARDING_STEPS.filter(step => step !== OnboardingStepId.SignIn);
 	private readonly disposables = this._register(new DisposableStore());
 	private readonly stepDisposables = this._register(new DisposableStore());
 	private previouslyFocusedElement: HTMLElement | undefined;
@@ -473,6 +473,10 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 	// =====================================================================
 
 	private _renderSignInStep(container: HTMLElement): void {
+		if (!defaultChat) {
+			return;
+		}
+
 		const wrapper = append(container, $('.onboarding-a-signin'));
 		const brand = append(wrapper, $('.onboarding-a-signin-brand'));
 		const brandIcon = append(brand, $('span.onboarding-a-signin-brand-icon'));
@@ -570,6 +574,10 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 	private static readonly GHE_INPUT_ACTION_PADDING = 28;
 
 	private _renderEnterpriseInstanceForm(actions: HTMLElement): void {
+		if (!defaultChat) {
+			return;
+		}
+
 		const enterprisePromptLabel = this._getEnterpriseInstancePromptLabel();
 
 		const container = append(actions, $('.onboarding-a-signin-ghe-input'));
@@ -657,6 +665,10 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 	}
 
 	private _renderEnterpriseSignInProgress(actions: HTMLElement): void {
+		if (!defaultChat) {
+			return;
+		}
+
 		const container = append(actions, $('.onboarding-a-signin-ghe-progress'));
 		container.setAttribute('aria-live', 'polite');
 		const spinner = append(container, $('span'));
@@ -667,6 +679,10 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 	}
 
 	private _getEnterpriseInstancePromptLabel(): string {
+		if (!defaultChat) {
+			return '';
+		}
+
 		return localize('onboarding.signIn.enterprise.prompt', "What is your {0} instance?", defaultChat.provider.enterprise.name);
 	}
 
@@ -739,6 +755,10 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 	}
 
 	private async _handleEnterpriseSignIn(): Promise<void> {
+		if (!defaultChat) {
+			return;
+		}
+
 		const existingUri = this.configurationService.getValue<string>(defaultChat.providerUriSetting);
 		if (typeof existingUri !== 'string' || !GHE_FULL_URI_REGEX.test(existingUri)) {
 			this.enterpriseInstanceValue = existingUri ?? '';
@@ -752,6 +772,10 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 	}
 
 	private async _submitEnterpriseInstance(resolvedUri: string): Promise<void> {
+		if (!defaultChat) {
+			return;
+		}
+
 		try {
 			await this.configurationService.updateValue(defaultChat.providerUriSetting, resolvedUri, ConfigurationTarget.USER);
 			this.enterpriseInstanceValue = resolvedUri;
@@ -764,6 +788,10 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 	}
 
 	private async _runEnterpriseSignInSetup(): Promise<void> {
+		if (!defaultChat) {
+			return;
+		}
+
 		const watch = this.enterpriseSignInWatch ?? StopWatch.create();
 		const provider = defaultChat.provider.enterprise.id;
 		this._setEnterpriseSignInUiState('progress');

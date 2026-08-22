@@ -9,13 +9,14 @@ import { Emitter, Event } from '../../../../../base/common/event.js';
 import { isWeb } from '../../../../../base/common/platform.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { IInlineCompletionsService } from '../../../../../editor/browser/services/inlineCompletionsService.js';
+import { IProductService } from '../../../../../platform/product/common/productService.js';
 import { ContextKeyExpression, IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
 import { MockContextKeyService } from '../../../../../platform/keybinding/test/common/mockKeybindingService.js';
 import { IMarkdownRendererService } from '../../../../../platform/markdown/browser/markdownRenderer.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
 import { ChatEntitlement, IChatEntitlementService, IChatSentiment } from '../../../../services/chat/common/chatEntitlementService.js';
 import { IStatusbarEntry, IStatusbarEntryAccessor, IStatusbarService } from '../../../../services/statusbar/browser/statusbar.js';
-import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
+import { productService, workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
 import { InEditorZenModeContext } from '../../../../common/contextkeys.js';
 import { ChatQuotaResumeState, ChatStatusBarEntry, computeQuotaResumeState } from '../../browser/chatStatus/chatStatusEntry.js';
 import { IChatStatusItemService } from '../../browser/chatStatus/chatStatusItemService.js';
@@ -153,6 +154,12 @@ suite('ChatStatusBarEntry', () => {
 			deleteEntry: () => { },
 		});
 		instantiationService.stub(IMarkdownRendererService, { _serviceBrand: undefined });
+		// The entry only renders for a product that configures a default chat
+		// agent; this one ships none, so supply one for these tests.
+		instantiationService.stub(IProductService, {
+			...productService,
+			defaultChatAgent: { ...productService.defaultChatAgent, chatExtensionId: 'test.chat-extension' } as IProductService['defaultChatAgent'],
+		});
 		const contextKeyService = instantiationService.get(IContextKeyService);
 		UpdateTitleBarContext.bindTo(contextKeyService).set(opts.updateTitleBar ?? false);
 		UpdateTitleBarChatInProgressContext.bindTo(contextKeyService).set(opts.updateTitleBarChatInProgress ?? false);

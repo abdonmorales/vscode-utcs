@@ -115,8 +115,8 @@ export function refreshTokens(commandService: ICommandService): void {
  * @param quality The product quality (`stable`, `insider`, or `undefined` for OSS).
  * @returns The upgrade URL with a `return_to` query parameter appended.
  */
-export function buildUpgradeUrlWithRedirect(baseUpgradeUrl: string, urlProtocol: string, quality: string | undefined): string {
-	const vscodeUri = `${urlProtocol}://${defaultChat.chatExtensionId}/upgrade-success`;
+export function buildUpgradeUrlWithRedirect(baseUpgradeUrl: string, urlProtocol: string, quality: string | undefined, chatExtensionId: string = defaultChat.chatExtensionId): string {
+	const vscodeUri = `${urlProtocol}://${chatExtensionId}/upgrade-success`;
 	const redirectHost = quality === 'stable' ? 'vscode.dev' : 'insiders.vscode.dev';
 	const returnTo = `https://${redirectHost}/redirect?url=${encodeURIComponent(vscodeUri)}`;
 

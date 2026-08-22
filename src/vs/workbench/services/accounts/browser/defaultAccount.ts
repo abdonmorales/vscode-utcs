@@ -157,6 +157,17 @@ export class DefaultAccountService extends Disposable implements IDefaultAccount
 	) {
 		super();
 		this.defaultAccountConfig = toDefaultAccountConfig(productService.defaultChatAgent);
+
+		if (!productService.defaultChatAgent) {
+			// No provider will ever be registered (see
+			// `DefaultAccountProviderContribution`), and the barrier is
+			// otherwise opened only from `setDefaultAccountProvider`. Open it
+			// here so `getDefaultAccount()` and friends resolve to "no account"
+			// instead of hanging forever - callers such as
+			// `extensionGalleryManifestService` await it on the private-gallery
+			// path and would never complete.
+			this.initBarrier.open();
+		}
 	}
 
 	async getDefaultAccount(): Promise<IDefaultAccount | null> {
