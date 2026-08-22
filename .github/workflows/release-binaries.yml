@@ -173,6 +173,7 @@ jobs:
         if: matrix.kind == 'dmg'
         id: dmg
         run: |
+          set -euo pipefail
           # Upstream has no dmg task, so build one from the .app with hdiutil
           # (part of macOS - no extra tooling required).
           APP="$(find "$(dirname "$PWD")/${{ matrix.build_dir }}" -maxdepth 1 -name '*.app' -print -quit)"
@@ -181,10 +182,57 @@ jobs:
           VERSION="$(node -p "require('./package.json').version")"
           ARCH="$([ "${{ matrix.gulp_task }}" = "vscode-darwin-arm64" ] && echo arm64 || echo x64)"
           ARTIFACT="VSCode-UTCS-${VERSION}-darwin-${ARCH}.dmg"
+
           STAGE="$(mktemp -d)/VSCode-UTCS"
           mkdir -p "$STAGE"
-          cp -R "$APP" "$STAGE/"
+          # ditto rather than `cp -R`: it is the copy that preserves bundle
+          # symlinks, xattrs and ACLs faithfully, and it is what the signature
+          # is computed over below.
+          ditto "$APP" "$STAGE/$(basename "$APP")"
+          STAGED_APP="$STAGE/$(basename "$APP")"
           ln -s /Applications "$STAGE/Applications"
+
+          echo "--- signature as produced by the build ---"
+          codesign -dv "$STAGED_APP" 2>&1 || true
+
+          # @vscode/gulp-electron rewrites Contents/Info.plist, renames the main
+          # executable, and renames all four Helper .app bundles along with
+          # their executables and plists - but it never touches _CodeSignature.
+          # That leaves Electron's own ad-hoc signature sealing contents that no
+          # longer match it. A broken seal is worse than no seal: on Apple
+          # Silicon macOS rejects the bundle outright with "is damaged and can't
+          # be opened", which is not click-throughable.
+          #
+          # Re-sign ad-hoc, innermost first. `--deep` is deprecated by Apple and
+          # skips Mach-O outside the standard bundle locations (the .node addons
+          # under Resources), so walk it explicitly. No hardened runtime: that
+          # would need entitlements for Electron's JIT and would break launch.
+          sign() { codesign --force --sign - --timestamp=none "$@"; }
+
+          # 1. Every Mach-O in the bundle: dylibs, .node addons, the crashpad
+          #    handler, and bundled CLI binaries under Resources such as
+          #    ripgrep. Candidates are narrowed by mode/extension (walking
+          #    `file` over every entry in the bundle is far too slow), then
+          #    confirmed by content so shell scripts are left alone.
+          find "$STAGED_APP" -type f \( -perm -u+x -o -name '*.dylib' -o -name '*.so' -o -name '*.node' \) -print0 |
+            while IFS= read -r -d '' f; do
+              case "$(file -b "$f")" in *Mach-O*) sign "$f" ;; esac
+            done
+
+          # 2. Versioned frameworks, signed at the version directory.
+          find "$STAGED_APP/Contents/Frameworks" -maxdepth 1 -name '*.framework' -print0 |
+            while IFS= read -r -d '' f; do sign "$f/Versions/A"; done
+
+          # 3. Helper apps, then 4. the outer bundle last.
+          find "$STAGED_APP/Contents/Frameworks" -maxdepth 1 -name '*.app' -print0 |
+            while IFS= read -r -d '' f; do sign "$f"; done
+          sign "$STAGED_APP"
+
+          # Fail the job rather than ship another unopenable dmg.
+          echo "--- verifying re-signed bundle ---"
+          codesign --verify --deep --strict --verbose=2 "$STAGED_APP"
+          codesign -dv "$STAGED_APP" 2>&1 || true
+
           hdiutil create -volname "VSCode-UTCS" -srcfolder "$STAGE" -ov -format UDZO "$ARTIFACT"
           echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
