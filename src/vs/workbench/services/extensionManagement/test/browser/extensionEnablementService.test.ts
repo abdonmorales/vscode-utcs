@@ -63,7 +63,7 @@ function createStorageService(instantiationService: TestInstantiationService, di
 }
 
 export class TestExtensionEnablementService extends ExtensionEnablementService {
-	constructor(instantiationService: TestInstantiationService, chatEntitlementService?: IChatEntitlementService) {
+	constructor(instantiationService: TestInstantiationService, chatEntitlementService?: IChatEntitlementService, testProductService: IProductService = productService) {
 		const disposables = new DisposableStore();
 		const storageService = createStorageService(instantiationService, disposables);
 		const extensionManagementServerService = instantiationService.get(IExtensionManagementServerService) ||
@@ -105,7 +105,7 @@ export class TestExtensionEnablementService extends ExtensionEnablementService {
 			chatEntitlementService ?? new TestChatEntitlementService(),
 			instantiationService,
 			new NullLogService(),
-			productService
+			testProductService
 		);
 		this._register(disposables);
 	}
@@ -1187,7 +1187,18 @@ suite('ExtensionEnablementService Test', () => {
 	});
 
 	test('test chat extension is disabled on profile switch when setup is not completed', async () => {
-		const chatExtensionId = productService.defaultChatAgent!.chatExtensionId;
+		// This product ships no default chat agent, so the migration has no
+		// subject here. Supply one so the migration itself stays covered for
+		// products that do configure an agent.
+		const chatExtensionId = 'test.chat-extension';
+		const chatAgentProductService: IProductService = {
+			...productService,
+			defaultChatAgent: {
+				...productService.defaultChatAgent,
+				extensionId: 'test.completions-extension',
+				chatExtensionId,
+			} as IProductService['defaultChatAgent'],
+		};
 		const chatExtension = aLocalExtension(chatExtensionId, undefined, ExtensionType.System);
 		installed.push(chatExtension);
 
@@ -1199,7 +1210,7 @@ suite('ExtensionEnablementService Test', () => {
 		const chatEntitlementService = new TestChatEntitlementService();
 		chatEntitlementService.context = new Lazy(() => ({ state: { completed: false }, onDidChange: Event.None })) as unknown as Lazy<ChatEntitlementContext>;
 
-		testObject = disposableStore.add(new TestExtensionEnablementService(instantiationService, chatEntitlementService));
+		testObject = disposableStore.add(new TestExtensionEnablementService(instantiationService, chatEntitlementService, chatAgentProductService));
 		await testObject.waitUntilInitialized();
 
 		// Chat extension should be disabled after initial setup
