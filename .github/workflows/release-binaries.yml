@@ -151,6 +151,13 @@ jobs:
         if: matrix.kind == 'exe'
         id: exe
         run: |
+          set -euo pipefail
+          # code.iss packages `tools\*` without a skip-if-missing flag, but the
+          # plain `vscode-win32-x64` build never creates that folder - the
+          # separate inno-updater task stages inno_updater.exe/vcruntime140.dll
+          # into it. Upstream CI runs the two back to back for this reason.
+          npm run gulp vscode-win32-x64-inno-updater
+          ls -l "$(dirname "$PWD")/${{ matrix.build_dir }}/tools"
           # The setup task does not chain the build; it reads the already-built
           # ../VSCode-win32-x64 and emits into .build/win32-x64/user-setup.
           npm run gulp vscode-win32-x64-user-setup
@@ -241,22 +248,32 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Runs once, only after every installer has uploaded, so the release is never
-  # left empty and no job can race another's freshly-uploaded asset.
+  # Runs after the build matrix has finished, so no job can race another's
+  # freshly-uploaded asset. It deliberately does not require every build to
+  # have succeeded - the step below refuses to prune unless the release
+  # already carries at least one installer, which is the property that
+  # actually matters (never leave the release empty).
   prune-legacy-assets:
     needs: [resolve-tag, build]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - name: Remove superseded reh-web (browser/server) assets
         run: |
           set -euo pipefail
           TAG="${{ needs.resolve-tag.outputs.tag }}"
+          ASSETS="$(gh release view "$TAG" --repo "${{ github.repository }}" --json assets --jq '.assets[].name')"
+          INSTALLERS="$(echo "$ASSETS" | grep -Ei '\.(exe|dmg|AppImage)$' || true)"
+          if [ -z "$INSTALLERS" ]; then
+            echo "No installers on the release yet - refusing to prune."
+            exit 0
+          fi
+          echo "Installers present:"; echo "$INSTALLERS"
           # This fork previously published vscode-reh-web server tarballs. The
           # desktop installers replace them, so drop any that linger on the
           # release. Scoped to the reh-web naming on purpose - it will never
           # touch an installer.
-          STALE="$(gh release view "$TAG" --repo "${{ github.repository }}" \
-                     --json assets --jq '.assets[].name | select(contains("reh-web"))' || true)"
+          STALE="$(echo "$ASSETS" | grep 'reh-web' || true)"
           if [ -z "$STALE" ]; then
             echo "No legacy reh-web assets to remove."
             exit 0
