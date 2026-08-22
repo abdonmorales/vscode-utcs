@@ -1,0 +1,45 @@
+{
+	"$schema": "vscode://schemas/color-theme",
+	"name": "VSCode-UTCS Dark",
+	// Inherits every neutral surface from the stock dark theme and re-points
+	// only the accent ramp at UT Austin burnt orange (#BF5700, PMS 159).
+	// Roles are kept distinct: #BF5700 fills (white label, 4.59:1), #D9691A
+	// hairlines and indicators (5.30:1 on the editor background), and lifted
+	// tints for link text, which needs to stay readable rather than merely
+	// visible. All values meet WCAG AA for their role.
+	"include": "./2026-dark.json",
+	"type": "dark",
+	"colors": {
+		// Focus rings - alpha preserved from the base theme.
+		"focusBorder": "#D9691AB3",
+		"activityBar.activeFocusBorder": "#D9691AB3",
+		"statusBar.focusBorder": "#D9691AB3",
+		"statusBarItem.focusBorder": "#D9691AB3",
+		"agentsChatInput.focusBorder": "#D9691AB3",
+
+		// Primary action.
+		"button.background": "#BF5700",
+		"button.border": "#BF5700",
+		"button.foreground": "#FFFFFF",
+		"button.hoverBackground": "#D0600A",
+
+		// Counts and progress.
+		"badge.background": "#BF5700",
+		"badge.foreground": "#FFFFFF",
+		"activityBarBadge.background": "#BF5700",
+		"activityBarBadge.foreground": "#FFFFFF",
+		"progressBar.background": "#D9691A",
+
+		// Active-location indicators.
+		"activityBar.activeBorder": "#BF5700",
+		"activityBarTop.activeBorder": "#BF5700",
+		"panelTitle.activeBorder": "#D9691A",
+		"tab.activeBorderTop": "#D9691A",
+		"terminal.tab.activeBorder": "#D9691A00",
+		"inputOption.activeBorder": "#D9691A",
+
+		// Links read as text, so they use the lifted tints.
+		"textLink.foreground": "#E8843C",
+		"textLink.activeForeground": "#F0975A"
+	}
+}

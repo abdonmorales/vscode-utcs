@@ -1,0 +1,38 @@
+{
+	"$schema": "vscode://schemas/color-theme",
+	"name": "VSCode-UTCS Light",
+	// Inherits every neutral surface from the stock light theme and re-points
+	// only the accent ramp at UT Austin burnt orange (#BF5700, PMS 159). On
+	// white the official colour carries text at 4.59:1, so it is used directly
+	// for both fills and accent text; hover darkens to #A94E00 (5.56:1),
+	// matching the base theme's convention of a darker hover on light.
+	"include": "./2026-light.json",
+	"type": "light",
+	"colors": {
+		"focusBorder": "#BF5700FF",
+		"activityBar.activeFocusBorder": "#BF5700FF",
+		"statusBar.focusBorder": "#BF5700FF",
+		"statusBarItem.focusBorder": "#BF5700FF",
+		"agentsChatInput.focusBorder": "#BF5700FF",
+
+		"button.background": "#BF5700",
+		"button.border": "#BF5700",
+		"button.foreground": "#FFFFFF",
+		"button.hoverBackground": "#A94E00",
+
+		"badge.background": "#BF5700",
+		"badge.foreground": "#FFFFFF",
+		"activityBarBadge.background": "#BF5700",
+		"activityBarBadge.foreground": "#FFFFFF",
+		"progressBar.background": "#BF5700",
+
+		"activityBar.activeBorder": "#BF5700",
+		"activityBarTop.activeBorder": "#BF5700",
+		"panelTitle.activeBorder": "#BF5700",
+		"tab.activeBorderTop": "#BF5700",
+		"inputOption.activeBorder": "#BF5700",
+
+		"textLink.foreground": "#BF5700",
+		"textLink.activeForeground": "#A94E00"
+	}
+}
