@@ -88,29 +88,37 @@ interface IMcpRegistryResponse {
 	readonly mcp_registries: ReadonlyArray<IMcpRegistryProvider>;
 }
 
-function toDefaultAccountConfig(defaultChatAgent: IDefaultChatAgent): IDefaultAccountConfig {
+/**
+ * Maps the product's default chat agent onto the account configuration used to
+ * sign in and fetch entitlements. This fork ships no default chat agent, so the
+ * `undefined` case yields an inert configuration: the provider that would
+ * consume it is never registered (see `DefaultAccountProviderContribution`),
+ * and the only remaining reader is the signed-out fallback in
+ * `getDefaultAccountAuthenticationProvider`, which then describes no provider.
+ */
+function toDefaultAccountConfig(defaultChatAgent: IDefaultChatAgent | undefined): IDefaultAccountConfig {
 	return {
-		preferredExtensions: [
+		preferredExtensions: defaultChatAgent ? [
 			defaultChatAgent.chatExtensionId,
 			defaultChatAgent.extensionId,
-		],
+		] : [],
 		authenticationProvider: {
 			default: {
-				id: defaultChatAgent.provider.default.id,
-				name: defaultChatAgent.provider.default.name,
+				id: defaultChatAgent?.provider.default.id ?? '',
+				name: defaultChatAgent?.provider.default.name ?? '',
 			},
 			enterprise: {
-				id: defaultChatAgent.provider.enterprise.id,
-				name: defaultChatAgent.provider.enterprise.name,
+				id: defaultChatAgent?.provider.enterprise.id ?? '',
+				name: defaultChatAgent?.provider.enterprise.name ?? '',
 			},
-			enterpriseProviderConfig: `${defaultChatAgent.completionsAdvancedSetting}.authProvider`,
-			enterpriseProviderUriSetting: defaultChatAgent.providerUriSetting,
-			scopes: defaultChatAgent.providerScopes,
+			enterpriseProviderConfig: defaultChatAgent ? `${defaultChatAgent.completionsAdvancedSetting}.authProvider` : '',
+			enterpriseProviderUriSetting: defaultChatAgent?.providerUriSetting ?? '',
+			scopes: defaultChatAgent?.providerScopes ?? [],
 		},
-		entitlementUrl: defaultChatAgent.entitlementUrl,
-		tokenEntitlementUrl: defaultChatAgent.tokenEntitlementUrl,
-		mcpRegistryDataUrl: defaultChatAgent.mcpRegistryDataUrl,
-		managedSettingsUrl: defaultChatAgent.managedSettingsUrl,
+		entitlementUrl: defaultChatAgent?.entitlementUrl ?? '',
+		tokenEntitlementUrl: defaultChatAgent?.tokenEntitlementUrl ?? '',
+		mcpRegistryDataUrl: defaultChatAgent?.mcpRegistryDataUrl ?? '',
+		managedSettingsUrl: defaultChatAgent?.managedSettingsUrl ?? '',
 	};
 }
 
@@ -1265,6 +1273,13 @@ class DefaultAccountProviderContribution extends Disposable implements IWorkbenc
 		@IDefaultAccountService defaultAccountService: IDefaultAccountService,
 	) {
 		super();
+		if (!productService.defaultChatAgent) {
+			// No default chat agent is configured, so there is no account to
+			// sign in to and no entitlements to fetch. Leaving the provider
+			// unset keeps `getDefaultAccount()` resolving to null, which is the
+			// signed-out path the rest of the workbench already handles.
+			return;
+		}
 		const defaultAccountProvider = this._register(instantiationService.createInstance(DefaultAccountProvider, toDefaultAccountConfig(productService.defaultChatAgent)));
 		defaultAccountService.setDefaultAccountProvider(defaultAccountProvider);
 	}
