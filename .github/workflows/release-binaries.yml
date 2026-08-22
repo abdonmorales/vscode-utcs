@@ -209,13 +209,39 @@ jobs:
           # would need entitlements for Electron's JIT and would break launch.
           sign() { codesign --force --sign - --timestamp=none "$@"; }
 
-          # 1. Every Mach-O in the bundle: dylibs, .node addons, the crashpad
-          #    handler, and bundled CLI binaries under Resources such as
-          #    ripgrep. Candidates are narrowed by mode/extension (walking
-          #    `file` over every entry in the bundle is far too slow), then
-          #    confirmed by content so shell scripts are left alone.
+          # 1. Loose Mach-O: dylibs, .node addons, the crashpad handler, and
+          #    bundled CLI binaries under Resources such as ripgrep.
+          #    Candidates are narrowed by mode/extension (walking `file` over
+          #    every entry in the bundle is far too slow), then confirmed by
+          #    content so shell scripts are left alone.
+          #
+          #    A bundle's own main binary is deliberately excluded here and
+          #    left to the pass that signs its bundle. codesign resolves a
+          #    main executable to the bundle that contains it, so signing
+          #    Contents/MacOS/<app> directly is really an attempt to sign the
+          #    whole app - which fails while its nested frameworks are still
+          #    unsigned. The x64 build shows this and the arm64 one does not,
+          #    because Electron ad-hoc signs arm64 (Apple Silicon requires it)
+          #    and leaves x64 unsigned, so on arm64 there was always an
+          #    existing nested signature to satisfy the check.
+          is_bundle_main_binary() {
+              local d; d="$(dirname "$1")"
+              case "$d" in
+                  */Contents/MacOS) return 0 ;;                    # .app main executable
+                  *.framework/Versions/*)
+                      # Only the binary sitting directly in the version
+                      # directory; anything deeper (Versions/A/Libraries/*)
+                      # is loose code and does need signing here.
+                      case "${d##*.framework/Versions/}" in
+                          */*) return 1 ;;
+                          *) return 0 ;;
+                      esac ;;
+              esac
+              return 1
+          }
           find "$STAGED_APP" -type f \( -perm -u+x -o -name '*.dylib' -o -name '*.so' -o -name '*.node' \) -print0 |
             while IFS= read -r -d '' f; do
+              is_bundle_main_binary "$f" && continue
               case "$(file -b "$f")" in *Mach-O*) sign "$f" ;; esac
             done
 
