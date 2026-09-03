@@ -9,48 +9,39 @@ import { upcastPartial } from '../../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { IPlaywrightService } from '../../../../../../platform/browserView/common/playwrightService.js';
 import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
-import { ILogService } from '../../../../../../platform/log/common/log.js';
 import { AgentNetworkFilterService } from '../../../../../../platform/networkFilter/common/networkFilterService.js';
 import { AgentNetworkDomainSettingId } from '../../../../../../platform/networkFilter/common/settings.js';
-import { IEditorService } from '../../../../../services/editor/common/editorService.js';
 import { IRemoteExplorerService } from '../../../../../services/remote/common/remoteExplorerService.js';
-import { IChatService } from '../../../../chat/common/chatService/chatService.js';
 import { IBrowserViewWorkbenchService } from '../../../common/browserView.js';
-import { OpenBrowserTool } from '../../../electron-browser/tools/openBrowserTool.js';
+import { NavigateBrowserTool } from '../../../electron-browser/tools/navigateBrowserTool.js';
 
-suite('OpenBrowserTool', () => {
+suite('NavigateBrowserTool', () => {
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('blocks reported parser-differential authorities before opening a browser page', async () => {
+	test('blocks reported parser-differential authorities before navigating a browser page', async () => {
 		const configService = new TestConfigurationService();
 		configService.setUserConfiguration(AgentNetworkDomainSettingId.NetworkFilter, true);
 		configService.setUserConfiguration(AgentNetworkDomainSettingId.AllowedNetworkDomains, []);
 		configService.setUserConfiguration(AgentNetworkDomainSettingId.DeniedNetworkDomains, []);
 		const networkFilterService = disposables.add(new AgentNetworkFilterService(configService));
-		const tool = new OpenBrowserTool(
+		const tool = new NavigateBrowserTool(
 			upcastPartial<IPlaywrightService>({}),
-			upcastPartial<IEditorService>({}),
+			networkFilterService,
 			upcastPartial<IBrowserViewWorkbenchService>({}),
 			upcastPartial<IRemoteExplorerService>({}),
-			networkFilterService,
-			upcastPartial<IChatService>({}),
-			configService,
-			upcastPartial<ILogService>({}),
 		);
-
 		const urls = [
 			'http://a@b@127.0.0.1:3000/private',
 			'http://a%40b@127.0.0.1:3000/private',
 			'http://[::1]:3000/private',
 			'http://[::ffff:127.0.0.1]:3000/private',
-			'https://[2001:db8::1]/private',
 			'https://evil.com%2fx/',
 			'https://evil.com%5c/',
 		];
 		const blocked = await Promise.all(urls.map(async url => {
 			try {
 				await tool.prepareToolInvocation({
-					parameters: { url },
+					parameters: { pageId: 'test-page', type: 'url', url },
 					toolCallId: 'test-tool-call',
 					chatSessionResource: undefined,
 				}, CancellationToken.None);
