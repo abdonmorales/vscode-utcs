@@ -1744,7 +1744,7 @@
         },
         "selector": [
           {
-            "filenamePattern": "*.md"
+            "filenamePattern": "*.{md,mkd,mkdn,mdwn,mdown,markdown,markdn,mdtxt,mdtext,litcoffee,ron,ronn,workbook}"
           }
         ]
       },
@@ -1757,7 +1757,7 @@
         },
         "selector": [
           {
-            "filenamePattern": "*.md"
+            "filenamePattern": "*.{md,mkd,mkdn,mdwn,mdown,markdown,markdn,mdtxt,mdtext,litcoffee,ron,ronn,workbook}"
           }
         ]
       }
