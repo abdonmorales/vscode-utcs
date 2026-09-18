@@ -250,7 +250,7 @@ export class NotificationRenderer implements IListRenderer<INotificationViewItem
 				ariaLabel: localize('notificationActions', "Notification Actions"),
 				actionViewItemProvider: (action, options) => {
 					if (action instanceof ConfigureNotificationAction) {
-						return data.toDispose.add(new DropdownMenuActionViewItem(action, {
+						return new DropdownMenuActionViewItem(action, {
 							getActions() {
 								const actions: IAction[] = [];
 
@@ -278,7 +278,7 @@ export class NotificationRenderer implements IListRenderer<INotificationViewItem
 							...options,
 							actionRunner: this.actionRunner,
 							classNames: action.class
-						}));
+						});
 					}
 
 					return undefined;
