@@ -691,6 +691,7 @@ export function mcpOAuthClientSecretStorageKey(mcpServerUrl: string, clientId: s
 export interface McpServerTransportHTTP {
 	readonly type: McpServerTransportType.HTTP;
 	readonly uri: URI;
+	/** Additional headers are restricted to the configured URI's origin. */
 	readonly headers: [string, string][];
 	readonly oauth?: McpServerTransportHTTPOAuth;
 	/**
