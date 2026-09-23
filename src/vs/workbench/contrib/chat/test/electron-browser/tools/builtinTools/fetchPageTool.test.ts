@@ -401,7 +401,6 @@ suite('FetchWebPageTool', () => {
 		const extractor = new TestWebContentExtractorService(contents);
 		const policyUris: string[] = [];
 		const networkFilter = new MockAgentNetworkFilterService();
-		networkFilter.isEnabled = () => false;
 		networkFilter.isUriAllowed = uri => {
 			policyUris.push(uri.toString(true));
 			return true;

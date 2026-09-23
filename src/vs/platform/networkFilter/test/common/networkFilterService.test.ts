@@ -109,10 +109,8 @@ suite('AgentNetworkFilterService', () => {
 				];
 
 				assert.deepStrictEqual({
-					enabled: service.isEnabled(),
 					allowed: urls.map(url => service.isUriAllowed(URI.parse(url))),
 				}, {
-					enabled: true,
 					allowed: [false, false, false, false, false, false, true, true, true],
 				});
 			});

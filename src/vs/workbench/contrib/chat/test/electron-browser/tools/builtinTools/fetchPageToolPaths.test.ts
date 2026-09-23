@@ -61,7 +61,6 @@ suite('FetchWebPageTool effective paths', () => {
 		const networkFilter: IAgentNetworkFilterService = {
 			_serviceBrand: undefined,
 			onDidChange: Event.None,
-			isEnabled: () => false,
 			isUriAllowed: uri => {
 				policyUris.push(uri.toString(true));
 				return true;
