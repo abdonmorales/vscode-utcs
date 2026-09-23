@@ -194,7 +194,7 @@ interface TestToolsServiceOptions {
  * Reduces boilerplate when tests need custom service configurations.
  */
 function createTestToolsService(store: ReturnType<typeof ensureNoDisposablesAreLeakedInTestSuite>, options?: TestToolsServiceOptions): TestToolsServiceSetup {
-	const configurationService = new TestConfigurationService();
+	const configurationService = options?.configurationService ?? new TestConfigurationService();
 	configurationService.setUserConfiguration(ChatConfiguration.ExtensionToolsEnabled, true);
 
 	// Allow tests to configure before service creation
