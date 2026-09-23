@@ -51,11 +51,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Only the notes directory is needed here, so skip the full checkout.
+      - name: Checkout release notes at target tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+          sparse-checkout: .github/release-notes
+          sparse-checkout-cone-mode: false
+
       - name: Ensure a release exists for this tag
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
+          # Hand-written notes win when present: an upstream-sync release
+          # carries dozens of cherry-picks, and generated notes would list
+          # every upstream PR title with no word on what matters.
+          NOTES=".github/release-notes/${TAG}.md"
           if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --generate-notes
+            if [ -f "$NOTES" ]; then
+              gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --notes-file "$NOTES"
+            else
+              gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --generate-notes
+            fi
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
