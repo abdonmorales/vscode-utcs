@@ -90,7 +90,9 @@ suite('BrowserViewModel', () => {
 		const results = await Promise.all(urls.map((url, index) => {
 			const model = disposables.add(new BrowserViewModel(
 				`page-${index}`,
-				{ type: 'user' },
+				// A user-owned (non-agent) view: this product's owner shape has no
+				// `type` discriminant, so user ownership is expressed as no sessionId.
+				{ mainWindowId: 1 },
 				undefined,
 				{ ...initialState, url },
 				browserViewService,
