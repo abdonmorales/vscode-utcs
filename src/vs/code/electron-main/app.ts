@@ -808,7 +808,7 @@ export class CodeApplication extends Disposable {
 	}
 
 	private setupManagedRemoteResourceUrlHandler(mainProcessElectronServer: ElectronIPCServer) {
-		const notFound = (): Electron.ProtocolResponse => ({ statusCode: 404, data: 'Not found' });
+		const notFound = (): Electron.ProtocolResponse => ({ statusCode: 404, data: Buffer.from('Not found') });
 		const remoteResourceChannel = new Lazy(() => mainProcessElectronServer.getChannel(
 			NODE_REMOTE_RESOURCE_CHANNEL_NAME,
 			new NodeRemoteResourceRouter(),
@@ -824,7 +824,7 @@ export class CodeApplication extends Disposable {
 				r => callback({ ...r, data: Buffer.from(r.body, 'base64') }),
 				err => {
 					this.logService.warn('error dispatching remote resource call', err);
-					callback({ statusCode: 500, data: String(err) });
+					callback({ statusCode: 500, data: Buffer.from(String(err)) });
 				});
 		});
 	}
