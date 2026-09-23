@@ -248,6 +248,14 @@ const toolReferenceNameEnumDescriptions: string[] = [];
 const jsonContributionRegistry = Registry.as<IJSONContributionRegistry>(JSONExtensions.JSONContribution);
 jsonContributionRegistry.registerSchema(HOOK_SCHEMA_URI, hookFileSchema);
 
+// Settings for features this product does not include. They stay registered so
+// their defaults still apply to anything that reads them, but a deprecation
+// message hides them from the Settings editor and its search unless the user
+// has configured one - e.g. carried over by Settings Sync - in which case the
+// message explains why it does nothing here.
+const AGENT_HOST_UNAVAILABLE = nls.localize('chat.setting.agentHostUnavailable', "This setting has no effect: it configures the agent host, which is not included in this product.");
+const COPILOT_FEATURE_UNAVAILABLE = nls.localize('chat.setting.copilotFeatureUnavailable', "This setting has no effect: it configures a GitHub Copilot feature that is not included in this product.");
+
 // Register configuration
 const configurationRegistry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
 configurationRegistry.registerConfiguration({
@@ -324,7 +332,7 @@ configurationRegistry.registerConfiguration({
 		},
 		'dictation.experimental.llmCleanup': {
 			type: 'boolean',
-			markdownDescription: nls.localize('dictation.experimental.llmCleanup', "Experimental: when dictation ends, the final transcript is passed through a small language model to restore punctuation, capitalization, paragraphs, and lists. Requires Copilot to be enabled; the transcript is sent to the language model for cleanup. Falls back to the raw transcript when no model is available. Use [dictation instructions](command:{0}) to customize terminology and formatting.", CONFIGURE_DICTATION_INSTRUCTIONS_ACTION_ID),
+			markdownDescription: nls.localize('dictation.experimental.llmCleanup', "Experimental: when dictation ends, the final transcript is passed through a small language model to restore punctuation, capitalization, paragraphs, and lists. Requires a language model to be available; the transcript is sent to it for cleanup. Falls back to the raw transcript when no model is available. Use [dictation instructions](command:{0}) to customize terminology and formatting.", CONFIGURE_DICTATION_INSTRUCTIONS_ACTION_ID),
 			default: true,
 			tags: ['experimental']
 		},
@@ -386,6 +394,7 @@ configurationRegistry.registerConfiguration({
 			tags: ['experimental'],
 		},
 		[ChatConfiguration.MigrateLegacyCopilotCliSessions]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			markdownDescription: nls.localize('chat.agentSessions.migrateLegacyCopilotCli', "Controls whether legacy extension host Copilot CLI chat sessions are migrated in place to the Agent host when opened, so their history becomes editable. When disabled, legacy sessions open as before."),
 			default: false,
@@ -443,6 +452,7 @@ configurationRegistry.registerConfiguration({
 			agentsWindow: { default: false },
 		},
 		'chat.implicitContext.includeActiveEditor': {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			markdownDescription: nls.localize('chat.implicitContext.includeActiveEditor', "When enabled, the active editor is automatically forwarded as context, even when it would otherwise only be suggested. Selections and explicitly attached files are always included regardless of this setting.\n\nNote: this setting currently only applies to Agent Host sessions (such as Copilot)."),
 			default: true,
@@ -641,7 +651,7 @@ configurationRegistry.registerConfiguration({
 		[ChatConfiguration.PermissionsSandboxToggleEnabled]: {
 			type: 'boolean',
 			default: false,
-			markdownDescription: nls.localize('chat.experimental.permissionsSandboxToggle.enabled', "Controls whether the permissions picker shows a \"Sandboxing for terminal\" toggle. Local sessions show it on the Default permissions option; Copilot Agent Host sessions show it as a separate setting that applies to every permission mode. For Copilot SDK sessions using the built-in shell tool, the toggle reflects and updates `#chat.agentHost.sdkSandbox.enabled#` or `#chat.agentHost.sdkSandbox.enabledWindows#`."),
+			markdownDescription: nls.localize('chat.experimental.permissionsSandboxToggle.enabled', "Controls whether the permissions picker shows a \"Sandboxing for terminal\" toggle. Local sessions show it on the Default permissions option."),
 			tags: ['experimental'],
 			experiment: {
 				mode: 'auto'
@@ -675,12 +685,12 @@ configurationRegistry.registerConfiguration({
 				},
 			},
 			default: { mode: 'interactive', approvals: ChatDefaultPermissionLevel.Manual },
-			markdownDescription: nls.localize('chat.defaultConfiguration.settingDescription', "Controls the default configuration for new agent sessions (such as Copilot). You can still change the mode and approval behavior per session, and each session remembers what was used."),
+			markdownDescription: nls.localize('chat.defaultConfiguration.settingDescription', "Controls the default configuration for new agent sessions. You can still change the mode and approval behavior per session, and each session remembers what was used."),
 		},
 		[ChatConfiguration.DefaultModel]: {
 			type: 'string',
 			default: '',
-			markdownDescription: nls.localize('chat.defaultModel.description', "The default model for new chat conversations. Use \"auto\" to let Copilot pick a model, a model family name (such as \"opus\" or \"gemini\") to use the latest available model in that family, or a full model id. You can still switch the model within a conversation; each new conversation starts at this model."),
+			markdownDescription: nls.localize('chat.defaultModel.description', "The default model for new chat conversations. Use \"auto\" to let the model provider pick a model, a model family name (such as \"opus\" or \"gemini\") to use the latest available model in that family, or a full model id. You can still switch the model within a conversation; each new conversation starts at this model."),
 			experiment: {
 				mode: 'auto'
 			},
@@ -725,6 +735,7 @@ configurationRegistry.registerConfiguration({
 			}
 		},
 		[ChatConfiguration.SessionSyncEnabled]: {
+			deprecationMessage: COPILOT_FEATURE_UNAVAILABLE,
 			default: false,
 			markdownDescription: nls.localize('chat.sessionSync.enabled', "Enable session sync to GitHub.com. When enabled, Copilot session data is synced to your GitHub account for cross-device access and richer insights. Requires `#github.copilot.chat.localIndex.enabled#` to also be enabled."),
 			type: 'boolean',
@@ -1541,12 +1552,14 @@ configurationRegistry.registerConfiguration({
 			},
 		},
 		[AgentHostCustomTerminalToolEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.agentHost.customTerminalTool.enabled', "When enabled, Copilot SDK sessions use the Agent Host terminal tool override instead of the SDK's default terminal behavior."),
 			default: false,
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostCopilotSdkLogLevelSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'string',
 			enum: [...copilotSdkLogLevelSettingValues],
 			enumDescriptions: [
@@ -1559,6 +1572,7 @@ configurationRegistry.registerConfiguration({
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostMapLegacySettingsToManagedSettingsSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			markdownDescription: nls.localize('chat.agentHost.copilot.mapLegacySettingsToManagedSettings', "When enabled, maps supported legacy VS Code settings to equivalent Copilot SDK managed settings for local Agent Host sessions. Only restrictions are mapped, and only from globally-scoped values — workspace and folder values are ignored. Applies to local sessions using the Copilot agent; remote hosts and other agents are unaffected. This compatibility bridge is temporary and is not used for new settings."),
 			default: false,
@@ -1566,18 +1580,21 @@ configurationRegistry.registerConfiguration({
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostOpus48PromptEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.agentHost.opus48Prompt.enabled', "When enabled, Copilot SDK sessions running a Claude Opus 4.8 model apply Opus 4.8-tuned system-prompt section overrides on top of the default system message."),
 			default: false,
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostToolSearchEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.agentHost.copilot.toolSearch.enabled', "When enabled, Copilot SDK sessions defer MCP and non-core VS Code tools behind a tool-search tool so the model discovers them on demand instead of loading every tool definition up front."),
 			default: true,
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostToolSearchDeferThresholdSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'number',
 			description: nls.localize('chat.agentHost.copilot.toolSearch.deferThreshold', "Minimum number of tools before MCP and external tools are deferred behind tool search. Set to 0 to always defer external tools. Only effective when tool search is enabled."),
 			default: 1,
@@ -1585,12 +1602,14 @@ configurationRegistry.registerConfiguration({
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostReasoningEffortOverrideSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'string',
 			markdownDescription: nls.localize('chat.agentHost.reasoningEffortOverride', "Overrides the reasoning effort for Copilot SDK agent sessions regardless of the per-model picker value. Set it to a level the selected model supports (for example `low`, `medium`, `high`, or `xhigh`) — choosing a level the model does not support may be rejected by the model. A value that isn't a recognized effort level is ignored and the session falls back to the picker value. Applied when a session is created and when its model changes. Only affects Copilot CLI agent sessions.\n\n**Note**: This is an advanced setting for experimentation."),
 			default: '',
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostReasoningSummaryEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			markdownDescription: nls.localize('chat.agentHost.reasoningSummary', "When enabled, requests concise reasoning summaries for supported Copilot SDK agent sessions."),
 			default: false,
@@ -1598,6 +1617,7 @@ configurationRegistry.registerConfiguration({
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostCopilotModelCapabilityOverridesSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'object',
 			markdownDescription: nls.localize('chat.agentHost.copilot.modelCapabilityOverrides', "Per-model capability overrides for Copilot SDK agent sessions, keyed by model id (`*` matches every model; a specific entry wins field-by-field), intended for evaluating models against an existing model's profile. Declare an aliased `family` (for example `claude-opus-4.8`) to route the model to that family's tuned system prompt and tool profile without changing the model id sent to the runtime — so a preview model can be evaluated against a known prompt while still running on its own endpoint — a `reasoningEffort` to pin its effort level, `availableTools`/`excludedTools` to filter its tool set, or `modelCapabilities` to override individual capability limits (e.g. vision support, context window size) passed through to the SDK. All overrides apply when a session launches or resumes. On a mid-session model change, only the new model's `reasoningEffort` is applied; the session keeps its launch-time family, tool filters, and model capabilities. Only affects Copilot agent sessions.\n\n**Note**: This is an advanced setting for experimentation."),
 			additionalProperties: {
@@ -1634,6 +1654,7 @@ configurationRegistry.registerConfiguration({
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostAllowSignedOutWhenUsableSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			markdownDescription: nls.localize('chat.agentHost.allowSignedOutWhenUsable', "When enabled, Agent Host sessions remain available while signed out. The Agents window opens without forcing GitHub sign-in, and editor chat lets you select the Copilot harness. Agents usable without GitHub (for example Codex with ChatGPT authentication or Claude in native mode with your own Anthropic credentials) work while signed out; agents that require GitHub prompt you to add a model or sign in. When disabled (the default), GitHub sign-in is required before the Agents window opens."),
 			default: false,
@@ -1642,6 +1663,7 @@ configurationRegistry.registerConfiguration({
 			experiment: { mode: 'startup' }
 		},
 		[AgentHostSdkSandboxEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'string',
 			enum: [AgentSandboxEnabledValue.Off, AgentSandboxEnabledValue.On],
 			enumDescriptions: [
@@ -1656,6 +1678,7 @@ configurationRegistry.registerConfiguration({
 			},
 		},
 		[AgentHostSdkSandboxWindowsEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'string',
 			enum: [AgentSandboxEnabledValue.Off, AgentSandboxEnabledValue.On],
 			enumDescriptions: [
@@ -1708,6 +1731,7 @@ configurationRegistry.registerConfiguration({
 			markdownEnumDescriptions: ExploreAgentDefaultModel.modelDescriptions
 		},
 		[ChatConfiguration.BYOKUtilityModelDefault]: {
+			deprecationMessage: COPILOT_FEATURE_UNAVAILABLE,
 			type: 'string',
 			markdownDescription: nls.localize('chat.byokUtilityModelDefault.description', "Controls the default model used by built-in utility flows when the selected main agent model is a bring your own key (BYOK) model. This setting has no effect when the selected main agent model is provided by GitHub Copilot. A specific model configured in {0} or {1} takes precedence.", '`#chat.utilityModel#`', '`#chat.utilitySmallModel#`'),
 			enum: [BYOKUtilityModelDefault.None, BYOKUtilityModelDefault.MainAgent, BYOKUtilityModelDefault.Copilot],
@@ -2084,7 +2108,7 @@ configurationRegistry.registerConfiguration({
 		[PromptsConfig.USE_CLAUDE_HOOKS]: {
 			type: 'boolean',
 			title: nls.localize('chat.useClaudeHooks.title', "Use Claude Hooks",),
-			markdownDescription: nls.localize('chat.useClaudeHooks.description', "Controls whether hooks from Claude configuration files can execute. When disabled, only Copilot-format hooks are used. Hooks are loaded from the files configured in `#chat.hookFilesLocations#`. This setting is only used by the Local agent harness.",),
+			markdownDescription: nls.localize('chat.useClaudeHooks.description', "Controls whether hooks from Claude configuration files can execute. When disabled, only hooks from other hook files are used. Hooks are loaded from the files configured in `#chat.hookFilesLocations#`. This setting is only used by the Local agent harness.",),
 			default: false,
 			restricted: true,
 			disallowConfigurationDefault: true,
@@ -2204,11 +2228,12 @@ configurationRegistry.registerConfiguration({
 		},
 		[ChatAIDisabledSettingId]: {
 			type: 'boolean',
-			description: nls.localize('chat.disableAIFeatures', "Disable and hide built-in AI features provided by GitHub Copilot, including chat and inline suggestions."),
+			description: nls.localize('chat.disableAIFeatures', "Disable and hide built-in AI features, including chat and inline suggestions."),
 			default: false,
 			scope: ConfigurationScope.WINDOW,
 		},
 		[ChatConfiguration.TitleBarSignInEnabled]: {
+			deprecationMessage: COPILOT_FEATURE_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.titleBar.signIn.enabled', "Controls whether the Copilot Sign In button is shown in the title bar when signed out. When disabled, the Sign In affordance falls back to the status bar."),
 			default: true,
@@ -2247,6 +2272,7 @@ configurationRegistry.registerConfiguration({
 			}
 		},
 		[ChatConfiguration.GrowthNotificationEnabled]: {
+			deprecationMessage: COPILOT_FEATURE_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.growthNotification', "Controls whether to show a growth notification in the agent sessions view to encourage new users to try Copilot."),
 			default: false,
@@ -2267,6 +2293,7 @@ configurationRegistry.registerConfiguration({
 			tags: ['preview'],
 		},
 		'chat.extensionUnification.enabled': {
+			deprecationMessage: COPILOT_FEATURE_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.extensionUnification.enabled', "Enables the unification of GitHub Copilot extensions. When enabled, all GitHub Copilot functionality is served from the GitHub Copilot Chat extension. When disabled, the GitHub Copilot and GitHub Copilot Chat extensions operate independently."),
 			default: true,
@@ -2299,6 +2326,7 @@ configurationRegistry.registerConfiguration({
 			}
 		},
 		[ChatConfiguration.CollectInstructionsInExtension]: {
+			deprecationMessage: COPILOT_FEATURE_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.experimental.collectInstructionsInExtension', "When enabled, automatic instruction collection (.instructions.md, agent instructions, customizations index) is performed by the GitHub Copilot Chat extension instead of the core workbench."),
 			default: false,

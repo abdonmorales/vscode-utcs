@@ -65,6 +65,12 @@ import { AgentMergeConfigKey, AgentMergeSettingId } from './agentMerge.js';
 //   - `src/vs/workbench/contrib/chat/browser/chat.shared.contribution.ts`
 //     (renderer registration for the settings UI).
 
+// Settings for the agent host, which this product does not include. They stay
+// registered so their defaults still apply to anything that reads them, but a
+// deprecation message hides them from the Settings editor and its search unless
+// the user has configured one, in which case it explains why it does nothing.
+const AGENT_HOST_UNAVAILABLE = nls.localize('chat.setting.agentHostUnavailable', "This setting has no effect: it configures the agent host, which is not included in this product.");
+
 const configurationRegistry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
 
 // Experiment values resolve in the renderer, so they must sync to the agent host through root config.
@@ -120,6 +126,7 @@ configurationRegistry.registerConfiguration({
 			agentHost: { key: AgentMergeConfigKey.Enabled },
 		},
 		[AgentMergeSettingId.AddressReviews]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.agentMerge.addressReviews', "Controls whether enabled Agent Merge sessions address unresolved review threads, changes-requested reviews, and new pull request comments from repository maintainers or the Copilot pull request reviewer."),
 			default: true,
@@ -202,6 +209,7 @@ configurationRegistry.registerConfiguration({
 			agentHost: { key: AgentHostMarkdownPlanRichLinksEnabledConfigKey },
 		},
 		[AgentHostSystemProxyEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.agentHost.systemProxy.enabled', "When enabled, Copilot sessions automatically discover and use the operating system's proxy configuration when no proxy environment variable is set."),
 			default: true,
@@ -218,6 +226,7 @@ configurationRegistry.registerConfiguration({
 			agentHost: { key: AgentHostGitHubMcpServerEnabledConfigKey },
 		},
 		[AgentHostCopilotMultiRootEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.agentHost.copilotAgent.multiRootEnabled', "When enabled, Copilot agent-host sessions advertise support for multiple working directories, so a session created in a multi-root workspace can span every workspace folder. Experimental; newly created sessions pick up a change without restarting the agent host."),
 			default: false,
@@ -245,6 +254,7 @@ configurationRegistry.registerConfiguration({
 			agentHost: { key: AgentHostCodexMultiRootEnabledConfigKey },
 		},
 		[AgentHostClaudeAgentEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.agentHost.claudeAgent.enabled', "When enabled, the agent host registers the Claude provider, subject to the Claude SDK being reachable. The agent host process must be restarted for changes to take effect."),
 			default: true,
@@ -272,6 +282,7 @@ configurationRegistry.registerConfiguration({
 			agentHost: { key: AgentHostByokModelsEnabledConfigKey, scope: AgentHostConfigurationSyncScope.Local },
 		},
 		[AgentHostCodexAgentEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.agentHost.codexAgent.enabled', "When enabled, the agent host registers the Codex provider (subject to the Codex SDK being reachable). Enabling takes effect without restarting the agent host."),
 			default: false,
@@ -320,6 +331,7 @@ configurationRegistry.registerConfiguration({
 			included: product.quality !== 'stable',
 		},
 		[AgentHostOTelEnabledSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			markdownDescription: nls.localize('chat.agentHost.otel.enabled', "When enabled, the agent host emits OpenTelemetry traces from the Copilot SDK. Configurable in user settings only. Either configure `#chat.agentHost.otel.otlpEndpoint#` to ship traces to an external collector or enable `#chat.agentHost.otel.dbSpanExporter.enabled#` to capture them locally."),
 			default: false,
@@ -344,6 +356,7 @@ configurationRegistry.registerConfiguration({
 			},
 		},
 		[AgentHostOTelExporterTypeSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'string',
 			enum: ['otlp-http', 'otlp-grpc', 'console', 'file'],
 			markdownDescription: nls.localize('chat.agentHost.otel.exporterType', "Exporter backend used by the Copilot SDK when `#chat.agentHost.otel.enabled#` is on. Configurable in user settings only. `otlp-grpc` is downgraded to `otlp-http` transparently in the CLI runtime."),
@@ -375,6 +388,7 @@ configurationRegistry.registerConfiguration({
 			},
 		},
 		[AgentHostOTelOtlpProtocolSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'string',
 			markdownDescription: nls.localize('chat.agentHost.otel.otlpProtocol', "Enterprise-managed OTLP wire protocol (`http/json`, `http/protobuf`, or `grpc`) for Copilot OpenTelemetry export. Policy-only: there is no user-facing setting; it carries the managed `telemetry.protocol` so the agent host's `OTEL_EXPORTER_OTLP_PROTOCOL` distinguishes protobuf from json."),
 			default: '',
@@ -401,6 +415,7 @@ configurationRegistry.registerConfiguration({
 			},
 		},
 		[AgentHostOTelOtlpEndpointSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'string',
 			markdownDescription: nls.localize('chat.agentHost.otel.otlpEndpoint', "OTLP endpoint URL when exporter type is `otlp-http` or `otlp-grpc`. Configurable in user settings only. Sets `OTEL_EXPORTER_OTLP_ENDPOINT` inside the agent host process."),
 			default: '',
@@ -424,6 +439,7 @@ configurationRegistry.registerConfiguration({
 			},
 		},
 		[AgentHostOTelCaptureContentSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			markdownDescription: nls.localize('chat.agentHost.otel.captureContent', "When enabled, includes prompt and response content in OTel span attributes. Configurable in user settings only. Sets `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT`. Privacy-sensitive: do not enable in environments that ship spans to shared sinks."),
 			default: false,
@@ -449,6 +465,7 @@ configurationRegistry.registerConfiguration({
 			},
 		},
 		[AgentHostOTelOutfileSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'string',
 			markdownDescription: nls.localize('chat.agentHost.otel.outfile', "Output path for span JSON lines when exporter type is `file`. Configurable in user settings only. Sets `COPILOT_OTEL_FILE_EXPORTER_PATH`."),
 			default: '',
@@ -480,6 +497,7 @@ configurationRegistry.registerConfiguration({
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostOTelServiceNameSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'string',
 			markdownDescription: nls.localize('chat.agentHost.otel.serviceName', "Enterprise-managed OTel `service.name` resource attribute for Copilot OpenTelemetry export. Policy-only: there is no user-facing setting; it carries the managed `telemetry.serviceName` so the agent host's `OTEL_SERVICE_NAME` identifies spans from this deployment."),
 			default: '',
@@ -506,6 +524,7 @@ configurationRegistry.registerConfiguration({
 			},
 		},
 		[AgentHostOTelResourceAttributesSettingId]: {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			// Policy-only delivery slot — no user-writable surface (mirrors `chat.plugins.extraMarketplaces`).
 			// Carried as a `{ [key]: string }` object; the starters serialize it into `OTEL_RESOURCE_ATTRIBUTES`.
 			type: 'object',

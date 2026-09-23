@@ -35,6 +35,12 @@ export interface IAgentHostEnablementService {
 	readonly managedSandboxEnforced: IObservable<boolean>;
 }
 
+// Settings for the agent host, which this product does not include. They stay
+// registered so their defaults still apply to anything that reads them, but a
+// deprecation message hides them from the Settings editor and its search unless
+// the user has configured one, in which case it explains why it does nothing.
+const AGENT_HOST_UNAVAILABLE = nls.localize('chat.setting.agentHostUnavailable', "This setting has no effect: it configures the agent host, which is not included in this product.");
+
 const configurationRegistry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
 configurationRegistry.registerConfiguration({
 	id: 'chatAgentHost',
@@ -42,6 +48,7 @@ configurationRegistry.registerConfiguration({
 	type: 'object',
 	properties: {
 		'chat.editor.preferCopilotHarness': {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.editor.preferCopilotHarness', "When enabled, uses the Agent Host Copilot SDK whenever the local harness would otherwise be selected for a new editor chat session. Claude and Codex selections are unaffected."),
 			default: false,
@@ -60,6 +67,7 @@ configurationRegistry.registerConfiguration({
 			},
 		},
 		'chat.defaultToCopilotHarness': {
+			deprecationMessage: AGENT_HOST_UNAVAILABLE,
 			type: 'boolean',
 			description: nls.localize('chat.defaultToCopilotHarness', "When enabled, new editor and panel chat sessions default to the Agent Host Copilot SDK instead of the local harness."),
 			default: false,
