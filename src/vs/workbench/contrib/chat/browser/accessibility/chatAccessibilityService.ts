@@ -6,8 +6,12 @@
 import * as dom from '../../../../../base/browser/dom.js';
 import { renderAsPlaintext } from '../../../../../base/browser/markdownRenderer.js';
 import { alert, status } from '../../../../../base/browser/ui/aria/aria.js';
+import { RunOnceScheduler } from '../../../../../base/common/async.js';
+import { Event } from '../../../../../base/common/event.js';
 import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import { Disposable, DisposableMap, DisposableSet, toDisposable } from '../../../../../base/common/lifecycle.js';
+import { Disposable, DisposableMap, DisposableSet, DisposableStore, IDisposable, MutableDisposable, toDisposable } from '../../../../../base/common/lifecycle.js';
+import { ResourceMap } from '../../../../../base/common/map.js';
+import { runOnChange } from '../../../../../base/common/observable.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { localize } from '../../../../../nls.js';
 import { AccessibilitySignal, IAccessibilitySignalService } from '../../../../../platform/accessibilitySignal/browser/accessibilitySignalService.js';
@@ -18,6 +22,7 @@ import { FocusMode } from '../../../../../platform/native/common/native.js';
 import { IHostService } from '../../../../services/host/browser/host.js';
 import { AccessibilityVoiceSettingId } from '../../../accessibility/browser/accessibilityConfiguration.js';
 import { ElicitationState, IChatElicitationRequest, IChatService } from '../../common/chatService/chatService.js';
+import { IChatModel } from '../../common/model/chatModel.js';
 import { IChatResponseViewModel } from '../../common/model/chatViewModel.js';
 import { ChatConfiguration, ChatNotificationMode } from '../../common/constants.js';
 import { IChatAccessibilityService, IChatWidgetService } from '../chat.js';
@@ -28,7 +33,7 @@ const CHAT_RESPONSE_PENDING_ALLOWANCE_MS = 4000;
 export class ChatAccessibilityService extends Disposable implements IChatAccessibilityService {
 	declare readonly _serviceBrand: undefined;
 
-	private _pendingSignalMap: DisposableMap<URI, AccessibilityProgressSignalScheduler> = this._register(new DisposableMap());
+	private _pendingSignalMap: DisposableMap<URI, IDisposable> = this._register(new DisposableMap(new ResourceMap()));
 
 	private readonly toasts = this._register(new DisposableSet());
 
@@ -54,11 +59,36 @@ export class ChatAccessibilityService extends Disposable implements IChatAccessi
 		}));
 	}
 
-	acceptRequest(uri: URI, skipRequestSignal?: boolean): void {
+	acceptRequest(uri: URI, skipRequestSignal?: boolean, model: IChatModel | undefined = this._chatService.getSession(uri)): void {
 		if (!skipRequestSignal) {
 			this._accessibilitySignalService.playSignal(AccessibilitySignal.chatRequestSent, { allowManyInParallel: true });
 		}
-		this._pendingSignalMap.set(uri, this._instantiationService.createInstance(AccessibilityProgressSignalScheduler, CHAT_RESPONSE_PENDING_ALLOWANCE_MS, undefined));
+		const store = new DisposableStore();
+		const scheduler = store.add(new MutableDisposable<AccessibilityProgressSignalScheduler>());
+		const startProgress = () => {
+			if (!scheduler.value) {
+				scheduler.value = this._instantiationService.createInstance(AccessibilityProgressSignalScheduler, CHAT_RESPONSE_PENDING_ALLOWANCE_MS, undefined);
+			}
+		};
+		startProgress();
+		if (model) {
+			// Reruns cancel the active request right before sending its replacement, so only stop once the model settles as idle.
+			const stopIfIdle = store.add(new RunOnceScheduler(() => {
+				if (!model.hasActiveRequest.get()) {
+					this._disposeRequestIfCurrent(uri, store);
+				}
+			}, 0));
+			store.add(runOnChange(model.requestInProgress, inProgress => inProgress ? startProgress() : scheduler.clear()));
+			store.add(runOnChange(model.hasActiveRequest, active => active ? stopIfIdle.cancel() : stopIfIdle.schedule()));
+			store.add(Event.once(model.onDidDispose)(() => this._disposeRequestIfCurrent(uri, store)));
+		}
+		this._pendingSignalMap.set(uri, store);
+	}
+
+	private _disposeRequestIfCurrent(uri: URI, store: IDisposable): void {
+		if (this._pendingSignalMap.get(uri) === store) {
+			this._pendingSignalMap.deleteAndDispose(uri);
+		}
 	}
 
 	disposeRequest(requestId: URI): void {
