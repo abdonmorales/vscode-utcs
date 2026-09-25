@@ -1805,6 +1805,10 @@ export interface IModifierKeyStatus {
 	metaKey: boolean;
 	lastKeyPressed?: ModifierKey;
 	lastKeyReleased?: ModifierKey;
+	/**
+	 * The keyboard event that caused the change. Only available while
+	 * listeners of {@link ModifierKeyEmitter} are notified.
+	 */
 	event?: KeyboardEvent;
 }
 
@@ -1863,8 +1867,7 @@ export class ModifierKeyEmitter extends event.Emitter<IModifierKeyStatus> {
 			this._keyStatus.shiftKey = e.shiftKey;
 
 			if (this._keyStatus.lastKeyPressed) {
-				this._keyStatus.event = e;
-				this.fire(this._keyStatus);
+				this.fireWithEvent(e);
 			}
 		}, true));
 
@@ -1895,8 +1898,7 @@ export class ModifierKeyEmitter extends event.Emitter<IModifierKeyStatus> {
 			this._keyStatus.shiftKey = e.shiftKey;
 
 			if (this._keyStatus.lastKeyReleased) {
-				this._keyStatus.event = e;
-				this.fire(this._keyStatus);
+				this.fireWithEvent(e);
 			}
 		}, true));
 
@@ -1921,6 +1923,21 @@ export class ModifierKeyEmitter extends event.Emitter<IModifierKeyStatus> {
 
 	get keyStatus(): IModifierKeyStatus {
 		return this._keyStatus;
+	}
+
+	/**
+	 * The keyboard event is only exposed while listeners are notified. Holding on to it
+	 * would retain its target and event path, e.g. the DOM of an editor that was detached
+	 * after the key press (#146841).
+	 */
+	private fireWithEvent(e: KeyboardEvent): void {
+		const keyStatus = this._keyStatus;
+		keyStatus.event = e;
+		try {
+			this.fire(keyStatus);
+		} finally {
+			keyStatus.event = undefined;
+		}
 	}
 
 	get isModifierPressed(): boolean {
