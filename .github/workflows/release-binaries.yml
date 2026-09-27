@@ -27,6 +27,11 @@ on:
         description: 'Tag to build and attach installers to (defaults to the latest release). A new tag is created at the dispatched commit.'
         required: false
         type: string
+      recreate:
+        description: 'Delete the existing release and tag, then recreate both at the dispatched commit (refused once the release has files)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -48,6 +53,27 @@ jobs:
             TAG=$(gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName)
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          # Recreating is for a release whose build failed before anything
+          # was published. It needs an explicitly named tag, and is refused
+          # once installers are attached.
+          if [ "${{ inputs.recreate }}" = "true" ] && [ -n "${{ inputs.tag }}" ] && gh api "repos/${{ github.repository }}/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+              ASSETS=$(gh release view "$TAG" --repo "${{ github.repository }}" --json assets --jq '.assets | length')
+              if [ "$ASSETS" != "0" ]; then
+                echo "::error::Release $TAG already has $ASSETS assets; refusing to recreate it"
+                exit 1
+              fi
+              gh release delete "$TAG" --repo "${{ github.repository }}" --yes --cleanup-tag
+            else
+              gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/$TAG"
+            fi
+            for _ in $(seq 1 15); do
+              gh api "repos/${{ github.repository }}/git/ref/tags/$TAG" >/dev/null 2>&1 || break
+              sleep 2
+            done
+            echo "Deleted release and tag $TAG"
+          fi
 
           # A manual run may name a tag that does not exist yet, e.g. when
           # tags cannot be pushed directly. The release is then created at
