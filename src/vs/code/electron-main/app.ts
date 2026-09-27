@@ -834,10 +834,6 @@ export class CodeApplication extends Disposable {
 				return callback(notFound());
 			}
 
-			if (!request.referrer || request.referrer.startsWith(`${Schemas.vscodeWebview}://`)) {
-				return callback(notFound());
-			}
-
 			remoteResourceChannel.value.call<NodeRemoteResourceResponse>(NODE_REMOTE_RESOURCE_IPC_METHOD_NAME, [url]).then(
 				r => callback({ ...r, data: Buffer.from(r.body, 'base64') }),
 				err => {
