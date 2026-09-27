@@ -418,7 +418,7 @@ suite('MainThreadMcp - request policy', () => {
 		}(1, launch, mainThread, new NullLogService()));
 		return {
 			mainThread, policy, transport, stopped, requests,
-			// eslint-disable-next-line local/code-no-bracket-notation-for-identifiers -- Exercise the private request boundary without widening the transport API.
+			// Exercise the private request boundary without widening the transport API.
 			fetch: () => httpHandle['_fetch'](initialUrl, { method: 'POST', headers: {} }),
 			async denyDestination() {
 				await configuration.setUserConfiguration(mcpDeniedServersConfig, [{ serverUrl: destination }]);

@@ -178,7 +178,7 @@ suite('ExtHostMcp', () => {
 		});
 	});
 
-	/* eslint-disable local/code-no-bracket-notation-for-identifiers -- Exercise private request entry points without widening the transport API. */
+	// Exercise private request entry points without widening the transport API.
 	suite('McpHTTPHandle request destinations', () => {
 		const otherUrl = 'https://other.example/mcp';
 		const deniedMessage = 'Request denied by the test MCP policy';
@@ -627,7 +627,6 @@ suite('ExtHostMcp', () => {
 		});
 	});
 
-	/* eslint-enable local/code-no-bracket-notation-for-identifiers */
 	suite('IAuthMetadata', () => {
 		suite('properties', () => {
 			test('should expose readonly properties', async () => {
