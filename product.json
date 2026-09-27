@@ -47,6 +47,11 @@
 			"contribViewsRemote"
 		]
 	},
+	"extensionUntrustedWorkspaceSupport": {
+		"jeanp413.open-remote-ssh": {
+			"default": true
+		}
+	},
 	"nodejsArtifactFeed": "",
 	"electronArtifactFeed": "",
 	"urlProtocol": "vscode-utcs",
