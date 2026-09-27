@@ -4,18 +4,29 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
+import * as dom from '../../../../../../base/browser/dom.js';
+import { mainWindow } from '../../../../../../base/browser/window.js';
 import { DeferredPromise } from '../../../../../../base/common/async.js';
-import { Emitter } from '../../../../../../base/common/event.js';
+import { Emitter, Event } from '../../../../../../base/common/event.js';
+import { Disposable, DisposableStore, MutableDisposable } from '../../../../../../base/common/lifecycle.js';
+import { observableValue } from '../../../../../../base/common/observable.js';
+import { URI } from '../../../../../../base/common/uri.js';
+import { upcastPartial } from '../../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { OffsetRange } from '../../../../../../editor/common/core/ranges/offsetRange.js';
 import { Range } from '../../../../../../editor/common/core/range.js';
 import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
+import { NullLogService } from '../../../../../../platform/log/common/log.js';
+import { NullTelemetryService } from '../../../../../../platform/telemetry/common/telemetryUtils.js';
 import { SaveReason } from '../../../../../common/editor.js';
 import { ISaveAllEditorsOptions, ISaveEditorsResult } from '../../../../../services/editor/common/editorService.js';
 import { TestEditorService } from '../../../../../test/browser/workbenchTestServices.js';
+import { ChatInputPart } from '../../../browser/widget/input/chatInputPart.js';
 import { acceptAndAwaitSentRequest, ChatWidget, getImmediateSilentSlashCommandPart, layoutChatWidgetForInputHeight, saveAllBeforeChatSend, shouldShowChatTip, shouldShowChatWelcome } from '../../../browser/widget/chatWidget.js';
 import { ChatSendResult, ChatSendResultSent, IChatSendRequestData } from '../../../common/chatService/chatService.js';
 import { ChatAgentLocation, ChatConfiguration } from '../../../common/constants.js';
+import { IChatRequestViewModel } from '../../../common/model/chatViewModel.js';
+import { ToolAndToolSetEnablementMap } from '../../../common/tools/languageModelToolsService.js';
 import { ChatRequestSlashCommandPart, ChatRequestTextPart, IParsedChatRequest } from '../../../common/requestParser/chatParserTypes.js';
 import { observePromptTimelineHostWidth } from '../../../browser/promptTimeline/promptTimelineWidgetContrib.js';
 
@@ -258,6 +269,145 @@ suite('ChatWidget', () => {
 		onDidLayout.fire({ width: 640, height: 600 });
 		onDidLayout.dispose();
 		assert.deepStrictEqual(widths, [320, 480]);
+	});
+
+	function createFakeInputPart(name: string) {
+		const onDidFocus = store.add(new Emitter<void>());
+		const entriesMap = observableValue(`${name}.entriesMap`, ToolAndToolSetEnablementMap.fromMap(new Map()));
+		const counts = { updateContext: 0, dispose: 0 };
+		const part = upcastPartial<ChatInputPart>({
+			element: mainWindow.document.createElement('div'),
+			inputUri: URI.parse(`chat-input:/${name}`),
+			inputEditor: upcastPartial<ChatInputPart['inputEditor']>({
+				getValue: () => 'original request', getModel: () => null, focus: () => { },
+				onDidChangeModelContent: Event.None, onDidChangeCursorSelection: Event.None,
+			}),
+			attachmentModel: upcastPartial<ChatInputPart['attachmentModel']>({
+				attachments: [], getAttachmentIDs: () => new Set(), addContext: () => { },
+				updateContext: () => { counts.updateContext++; },
+			}),
+			selectedToolsModel: upcastPartial<ChatInputPart['selectedToolsModel']>({ entriesMap }),
+			selectedLanguageModel: observableValue(`${name}.model`, undefined),
+			height: observableValue(`${name}.height`, 0),
+			currentModeObs: observableValue(`${name}.mode`, upcastPartial<ReturnType<ChatInputPart['currentModeObs']['get']>>({ id: 'agent' })),
+			currentModeInfo: upcastPartial<ChatInputPart['currentModeInfo']>({}),
+			dnd: upcastPartial<ChatInputPart['dnd']>({ setDisabledOverlay: () => { } }),
+			onDidLoadInputState: Event.None,
+			onDidFocus: onDidFocus.event,
+			onDidAcceptFollowup: Event.None,
+			onDidChangeCurrentChatMode: Event.None,
+			onDidClickOverlay: Event.None,
+			render: () => { },
+			layout: () => { },
+			setChatMode: () => { },
+			setPermissionLevel: () => { },
+			setEditing: () => { },
+			toggleChatInputOverlay: () => { },
+			renderAttachedContext: () => { },
+			setValue: () => { },
+			focus: () => { },
+			dispose: () => { counts.dispose++; },
+		});
+		return { part, onDidFocus, entriesMap, counts };
+	}
+
+	test('releases the inline request edit input and its subscriptions when editing finishes', async () => {
+		const configurationService = new TestConfigurationService();
+		await configurationService.setUserConfiguration('chat.editRequests', 'inline');
+		const main = createFakeInputPart('main');
+		const inline = createFakeInputPart('inline');
+		const onDidChangeAgents = store.add(new Emitter<void>());
+		const onDidChangeContext = store.add(new Emitter<void>());
+		let scopedServiceDisposed = false;
+		let disposedTipPresenters = 0;
+		const instantiationService = {
+			createChild: () => ({ createInstance: () => inline.part, dispose: () => { scopedServiceDisposed = true; } }),
+			createInstance: (ctor: unknown) => ctor === ChatInputPart ? main.part : { dispose: () => { disposedTipPresenters++; } },
+		};
+		const inlineInputHolder = store.add(new MutableDisposable<ChatInputPart>());
+		const request = upcastPartial<IChatRequestViewModel>({
+			id: 'request',
+			message: { text: 'original request', parts: [] },
+			messageText: 'original request',
+			variables: [],
+		});
+		const rowContainer = mainWindow.document.createElement('div');
+		const requestTimestampContainer = dom.append(rowContainer, dom.$('div'));
+		let editing: IChatRequestViewModel | undefined;
+		const widget = Object.create(ChatWidget.prototype) as ChatWidget;
+		Object.defineProperties(widget, {
+			_store: { value: store.add(new DisposableStore()) },
+			_editingAutoScrollHold: { value: store.add(new MutableDisposable()) },
+			_editingDisposables: { value: store.add(new MutableDisposable()) },
+			inputPartDisposable: { value: store.add(new MutableDisposable()) },
+			inlineInputPartDisposable: { value: inlineInputHolder },
+			mainPasteTargetRegistration: { value: store.add(new MutableDisposable()) },
+			inlinePasteTargetRegistration: { value: store.add(new MutableDisposable()) },
+			_gettingStartedTip: { value: store.add(new MutableDisposable()) },
+			_onDidChangeActiveInputEditor: { value: { fire: () => { } } },
+			_onDidChangeContentHeight: { value: { fire: () => { } } },
+			inputContainer: { value: undefined, writable: true },
+			location: { value: ChatAgentLocation.Chat },
+			viewContext: { value: {} },
+			viewOptions: { value: {} },
+			instantiationService: { value: instantiationService },
+			chatPasteTargetService: { value: { registerTarget: () => Disposable.None } },
+			chatAgentService: { value: { onDidChangeAgents: onDidChangeAgents.event } },
+			contextKeyService: { value: { onDidChangeContext: onDidChangeContext.event } },
+			configurationService: { value: configurationService },
+			telemetryService: { value: NullTelemetryService },
+			logService: { value: new NullLogService() },
+			viewModel: {
+				value: {
+					model: { getRequests: () => [], setCheckpoint: () => { } },
+					sessionResource: URI.parse('chat-session:/session'),
+					get editing() { return editing; },
+					setEditing: (request: IChatRequestViewModel | undefined) => { editing = request; },
+				},
+			},
+			contribs: { value: [] },
+			refreshParsedInput: { value: () => { } },
+			onDidChangeItems: { value: () => { } },
+			listWidget: {
+				value: {
+					getTemplateDataForRequestId: () => ({ currentElement: request, rowContainer, requestTimestampContainer }),
+					acquireAutoScrollHold: () => Disposable.None,
+				},
+			},
+		});
+		const createInput = (ChatWidget.prototype as unknown as { createInput(container: HTMLElement): void }).createInput;
+		createInput.call(widget, mainWindow.document.createElement('div'));
+
+		widget.startEditing(request.id);
+		const whileEditing = { input: widget.input === inline.part, focusListener: inline.onDidFocus.hasListeners() };
+		main.entriesMap.set(ToolAndToolSetEnablementMap.fromMap(new Map()), undefined);
+		widget.finishedEditing();
+		const updatesAfterEdit = main.counts.updateContext + inline.counts.updateContext;
+		inline.entriesMap.set(ToolAndToolSetEnablementMap.fromMap(new Map()), undefined);
+
+		assert.deepStrictEqual({
+			whileEditing,
+			input: widget.input === main.part,
+			inlineDisposed: inline.counts.dispose > 0,
+			inlineInputHeld: inlineInputHolder.value !== undefined,
+			disposedTipPresenters,
+			scopedServiceDisposed,
+			inlineFocusListener: inline.onDidFocus.hasListeners(),
+			mainFocusListener: main.onDidFocus.hasListeners(),
+			toolUpdatesFromInlineInput: main.counts.updateContext + inline.counts.updateContext - updatesAfterEdit,
+			rowChildren: rowContainer.childElementCount,
+		}, {
+			whileEditing: { input: true, focusListener: true },
+			input: true,
+			inlineDisposed: true,
+			inlineInputHeld: false,
+			disposedTipPresenters: 0,
+			scopedServiceDisposed: true,
+			inlineFocusListener: false,
+			mainFocusListener: true,
+			toolUpdatesFromInlineInput: 0,
+			rowChildren: 1,
+		});
 	});
 });
 
