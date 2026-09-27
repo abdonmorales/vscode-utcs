@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to build and attach installers to (defaults to the latest release)'
+        description: 'Tag to build and attach installers to (defaults to the latest release). A new tag is created at the dispatched commit.'
         required: false
         type: string
 
@@ -48,6 +48,20 @@ jobs:
             TAG=$(gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName)
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          # A manual run may name a tag that does not exist yet, e.g. when
+          # tags cannot be pushed directly. The release is then created at
+          # the commit the run was dispatched from, which creates the tag.
+          if gh api "repos/${{ github.repository }}/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "ref=$TAG" >> "$GITHUB_OUTPUT"
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Tag $TAG does not exist"
+            exit 1
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -55,7 +69,7 @@ jobs:
       - name: Checkout release notes at target tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.tag.outputs.tag }}
+          ref: ${{ steps.tag.outputs.ref }}
           sparse-checkout: .github/release-notes
           sparse-checkout-cone-mode: false
 
@@ -66,11 +80,15 @@ jobs:
           # carries dozens of cherry-picks, and generated notes would list
           # every upstream PR title with no word on what matters.
           NOTES=".github/release-notes/${TAG}.md"
+          TARGET=()
+          if [ "${{ steps.tag.outputs.new }}" = "true" ]; then
+            TARGET=(--target "${{ github.sha }}")
+          fi
           if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             if [ -f "$NOTES" ]; then
-              gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --notes-file "$NOTES"
+              gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" "${TARGET[@]}" --notes-file "$NOTES"
             else
-              gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --generate-notes
+              gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" "${TARGET[@]}" --generate-notes
             fi
           fi
         env:
