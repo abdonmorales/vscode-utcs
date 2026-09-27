@@ -51,7 +51,24 @@
 	"electronArtifactFeed": "",
 	"urlProtocol": "vscode-utcs",
 	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
-	"builtInExtensions": [],
+	"builtInExtensions": [
+		{
+			"name": "jeanp413.open-remote-ssh",
+			"version": "0.3.1",
+			"sha256": "c6f16b225ab86925f2bd9e8cc5ba31e614978ccfa120f1509bdf6e99e5bef13f",
+			"repo": "https://github.com/jeanp413/open-remote-ssh",
+			"metadata": {
+				"id": "9fc16cea-08e2-4ae5-bf75-224004d722ff",
+				"publisherId": {
+					"publisherId": "82e59b79-acc5-4a5b-81cb-9303cbdc05cb",
+					"publisherName": "jeanp413",
+					"displayName": "jeanp413",
+					"flags": ""
+				},
+				"publisherDisplayName": "jeanp413"
+			}
+		}
+	],
 	"builtInExtensionsEnabledWithAutoUpdates": [],
 	"onboardingKeymaps": [
 		{
