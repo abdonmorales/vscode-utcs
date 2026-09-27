@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
+import { mainWindow } from '../../../../../../base/browser/window.js';
 import { timeout } from '../../../../../../base/common/async.js';
 import { Emitter, Event } from '../../../../../../base/common/event.js';
 import { toDisposable } from '../../../../../../base/common/lifecycle.js';
@@ -18,6 +19,7 @@ import { TestConfigurationService } from '../../../../../../platform/configurati
 import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { ChatAccessibilityService } from '../../../browser/accessibility/chatAccessibilityService.js';
 import { IChatWidgetService } from '../../../browser/chat.js';
+import { ChatWidget } from '../../../browser/widget/chatWidget.js';
 import { IChatService } from '../../../common/chatService/chatService.js';
 import { IChatModel } from '../../../common/model/chatModel.js';
 
@@ -131,7 +133,8 @@ suite('ChatAccessibilityService', () => {
 		service.acceptRequest(URI.parse('test://session'));
 		await timeout(5000);
 		log.push('before response');
-		service.acceptResponse(undefined, URI.parse('test://session'));
+		// This fork's acceptResponse also takes the widget and container for OS notifications; neither is read without a response.
+		service.acceptResponse(upcastPartial<ChatWidget>({}), mainWindow.document.createElement('div'), undefined, URI.parse('test://session'));
 
 		assert.deepStrictEqual(log, ['progress started', 'before response', 'progress stopped']);
 	}));
