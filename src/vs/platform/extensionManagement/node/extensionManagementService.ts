@@ -339,8 +339,12 @@ export class ExtensionManagementService extends AbstractExtensionManagementServi
 
 	private async downloadExtension(extension: IGalleryExtension, operation: InstallOperation, verifySignature: boolean, clientTargetPlatform?: TargetPlatform): Promise<{ readonly location: URI; readonly verificationStatus: ExtensionSignatureVerificationCode | undefined }> {
 		if (verifySignature) {
+			// VSCode-UTCS ships without @vscode/vsce-sign, and its marketplace
+			// (Open VSX) does not sign with Microsoft's certificates, so a
+			// verification attempt can only fail. Verify only when the user
+			// explicitly opts in via the setting.
 			const value = this.configurationService.getValue(VerifyExtensionSignatureConfigKey);
-			verifySignature = isBoolean(value) ? value : true;
+			verifySignature = isBoolean(value) ? value : false;
 		}
 		const { location, verificationStatus } = await this.extensionsDownloader.download(extension, operation, verifySignature, clientTargetPlatform);
 		const shouldRequireSignature = shouldRequireRepositorySignatureFor(extension.private, await this.extensionGalleryManifestService.getExtensionGalleryManifest());
