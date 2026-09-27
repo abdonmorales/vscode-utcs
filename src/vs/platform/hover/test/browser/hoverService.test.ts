@@ -52,6 +52,7 @@ suite('HoverService', () => {
 		instantiationService.stub(IKeybindingService, {
 			mightProducePrintableCharacter() { return false; },
 			softDispatch() { return NoMatchingKb; },
+			lookupKeybinding() { return undefined; },
 			resolveKeyboardEvent() {
 				return {
 					getLabel() { return ''; },
