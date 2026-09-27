@@ -7,6 +7,9 @@ name: Build and Publish Release Binaries
 #   macOS    -> .dmg   (from the built .app bundle)
 #   Linux    -> .AppImage
 #
+# plus Linux server tarballs (vscode-utcs-reh-linux-<arch>-<version>.tar.gz) that
+# Open Remote - SSH downloads onto SSH hosts, such as the UTCS lab machines.
+#
 # Triggers on pushing a version tag (`v*`). That is a ref-based event, so it
 # fires regardless of which branch the tagged commit lives on and does NOT
 # require this file to be on the default branch - `main` here is kept as a
@@ -148,6 +151,18 @@ jobs:
             build_dir: VSCode-linux-arm64
             kind: appimage
             appimage_arch: aarch64
+          # Linux servers for SSH remotes (Open Remote - SSH downloads the
+          # one matching the client via product.json#serverDownloadUrlTemplate).
+          - os: ubuntu-latest
+            gulp_task: vscode-reh-linux-x64-min
+            build_dir: vscode-reh-linux-x64
+            kind: server
+            server_arch: x64
+          - os: ubuntu-24.04-arm
+            gulp_task: vscode-reh-linux-arm64-min
+            build_dir: vscode-reh-linux-arm64
+            kind: server
+            server_arch: arm64
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -368,10 +383,26 @@ jobs:
           ARCH="$TOOL_ARCH" ./appimagetool --appimage-extract-and-run "$APPDIR" "$ARTIFACT"
           echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
+      # ----------------------------------------------------------------- Server
+      - name: Package Linux server (.tar.gz)
+        if: matrix.kind == 'server'
+        id: server
+        run: |
+          # The name and single top-level folder are what Open Remote - SSH
+          # expects: it fills in product.json#serverDownloadUrlTemplate and
+          # extracts with --strip-components 1 before running bin/<server>.
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          SERVER_APP="$(node -p "require('./product.json').serverApplicationName")"
+          test -x "../${{ matrix.build_dir }}/bin/${SERVER_APP}"
+          ARTIFACT="vscode-utcs-reh-linux-${{ matrix.server_arch }}-${VERSION}.tar.gz"
+          tar -czf "$ARTIFACT" -C .. "${{ matrix.build_dir }}"
+          echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
+
       # ----------------------------------------------------------------- Upload
       - name: Checksum and upload to the release
         run: |
-          ARTIFACT="${{ steps.exe.outputs.artifact }}${{ steps.dmg.outputs.artifact }}${{ steps.appimage.outputs.artifact }}"
+          ARTIFACT="${{ steps.exe.outputs.artifact }}${{ steps.dmg.outputs.artifact }}${{ steps.appimage.outputs.artifact }}${{ steps.server.outputs.artifact }}"
           if [ -z "$ARTIFACT" ] || [ ! -f "$ARTIFACT" ]; then
             echo "Expected installer '$ARTIFACT' was not produced"; exit 1
           fi

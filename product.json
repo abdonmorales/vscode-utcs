@@ -13,6 +13,7 @@
 	"serverLicensePrompt": "",
 	"serverApplicationName": "vscode-utcs-server",
 	"serverDataFolderName": ".vscode-utcs-server",
+	"serverDownloadUrlTemplate": "https://github.com/abdonmorales/vscode-utcs/releases/download/v${version}-utcs/vscode-utcs-reh-${os}-${arch}-${version}.tar.gz",
 	"tunnelApplicationName": "vscode-utcs-tunnel",
 	"win32DirName": "VSCode-UTCS",
 	"win32NameVersion": "VSCode-UTCS",
@@ -39,6 +40,12 @@
 		"resourceUrlTemplate": "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
 		"controlUrl": "",
 		"nlsBaseUrl": ""
+	},
+	"extensionEnabledApiProposals": {
+		"jeanp413.open-remote-ssh": [
+			"resolvers",
+			"contribViewsRemote"
+		]
 	},
 	"nodejsArtifactFeed": "",
 	"electronArtifactFeed": "",
