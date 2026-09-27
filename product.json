@@ -31,6 +31,15 @@
 	"linuxIconName": "vscode-utcs",
 	"licenseFileName": "LICENSE.txt",
 	"reportIssueUrl": "https://github.com/abdonmorales/vscode-utcs/issues/new",
+	"extensionsGallery": {
+		"serviceUrl": "https://open-vsx.org/vscode/gallery",
+		"itemUrl": "https://open-vsx.org/vscode/item",
+		"publisherUrl": "https://open-vsx.org/namespace",
+		"extensionUrlTemplate": "https://open-vsx.org/vscode/gallery/{publisher}/{name}/latest",
+		"resourceUrlTemplate": "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
+		"controlUrl": "",
+		"nlsBaseUrl": ""
+	},
 	"nodejsArtifactFeed": "",
 	"electronArtifactFeed": "",
 	"urlProtocol": "vscode-utcs",
