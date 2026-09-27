@@ -124,7 +124,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 
 	private readonly footerFocusableElements: HTMLElement[] = [];
 	private readonly stepFocusableElements: HTMLElement[] = [];
-	private selectedThemeId = 'dark-2026';
+	private selectedThemeId = 'utcs-dark';
 	private selectedKeymapId = 'vscode';
 	private _detectedEditorIds: Set<string> | undefined;
 	private _userSignedIn = false;
@@ -427,7 +427,9 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 			this.backButton.style.display = (this.currentStepIndex === 0 && !showEnterpriseBack) ? 'none' : '';
 		}
 		if (this.nextButton) {
-			if (this.currentStepIndex === 0) {
+			// Without a default chat agent there is no sign-in step, so the
+			// first step can also be the last and must offer "Get Started".
+			if (this.steps[this.currentStepIndex] === OnboardingStepId.SignIn) {
 				if (this._userSignedIn) {
 					this.nextButton.className = 'onboarding-a-btn onboarding-a-btn-primary';
 					this.nextButton.textContent = localize('onboarding.continue', "Continue");
@@ -447,7 +449,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		if (this.footerLeft) {
 			if (this._isLastStep()) {
 				// Show sign-in nudge in footer
-				if (!this._footerSignInBtn && !this._userSignedIn) {
+				if (defaultChat && !this._footerSignInBtn && !this._userSignedIn) {
 					this._footerSignInBtn = append(this.footerLeft, $<HTMLButtonElement>('button.onboarding-a-signin-nudge-btn'));
 					this._footerSignInBtn.type = 'button';
 					this._footerSignInBtn.textContent = localize('onboarding.sessions.signInNudge', "Sign in to use GitHub Copilot");

@@ -76,6 +76,12 @@
 	],
 	"onboardingThemes": [
 		{
+			"id": "utcs-dark",
+			"label": "VSCode-UTCS Dark",
+			"themeId": "VSCode-UTCS Dark",
+			"type": "dark"
+		},
+		{
 			"id": "dark-2026",
 			"label": "Dark 2026",
 			"themeId": "Dark 2026",
@@ -88,10 +94,10 @@
 			"type": "hcDark"
 		},
 		{
-			"id": "solarized-dark",
-			"label": "Solarized Dark",
-			"themeId": "Solarized Dark",
-			"type": "dark"
+			"id": "utcs-light",
+			"label": "VSCode-UTCS Light",
+			"themeId": "VSCode-UTCS Light",
+			"type": "light"
 		},
 		{
 			"id": "light-2026",
@@ -104,12 +110,6 @@
 			"label": "Light High Contrast",
 			"themeId": "Default High Contrast Light",
 			"type": "hcLight"
-		},
-		{
-			"id": "solarized-light",
-			"label": "Solarized Light",
-			"themeId": "Solarized Light",
-			"type": "light"
 		}
 	]
 }
