@@ -1,0 +1,11 @@
+{
+	"displayName": "UTCS Lab Machines",
+	"description": "Connect over SSH to the UTCS public Linux lab machines, picking one that is up and lightly loaded.",
+	"category": "UTCS",
+	"command.connect": "Connect to UTCS Lab Machine...",
+	"command.connectInCurrentWindow": "Connect Current Window to UTCS Lab Machine...",
+	"config.title": "UTCS Lab Machines",
+	"config.username": "Your UTCS (CS department) username for signing in to the lab machines. You are asked for it the first time you connect.",
+	"config.domain": "The domain appended to lab machine names, e.g. agate becomes agate.cs.utexas.edu.",
+	"config.statusUrl": "The page listing lab machines and their status. When it cannot be reached, the machine list built into the editor is used."
+}

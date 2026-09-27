@@ -83,6 +83,7 @@ const compilations = [
 	'extensions/search-result/tsconfig.json',
 	'extensions/simple-browser/tsconfig.json',
 	'extensions/tunnel-forwarding/tsconfig.json',
+	'extensions/utcs-lab-machines/tsconfig.json',
 	'extensions/typescript-language-features/web/tsconfig.json',
 	'extensions/typescript-language-features/tsconfig.json',
 	'extensions/vscode-api-tests/tsconfig.json',

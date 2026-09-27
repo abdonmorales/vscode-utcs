@@ -1,0 +1,83 @@
+{
+  "name": "utcs-lab-machines",
+  "displayName": "%displayName%",
+  "description": "%description%",
+  "version": "10.0.0",
+  "publisher": "vscode",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.82.0"
+  },
+  "extensionKind": [
+    "ui"
+  ],
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "category": "%category%",
+        "command": "utcsLab.connect",
+        "title": "%command.connect%"
+      },
+      {
+        "category": "%category%",
+        "command": "utcsLab.connectInCurrentWindow",
+        "title": "%command.connectInCurrentWindow%"
+      }
+    ],
+    "menus": {
+      "statusBar/remoteIndicator": [
+        {
+          "command": "utcsLab.connect",
+          "group": "remote_20_ssh_1_utcs@1"
+        },
+        {
+          "command": "utcsLab.connectInCurrentWindow",
+          "group": "remote_20_ssh_1_utcs@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "%config.title%",
+      "properties": {
+        "utcsLab.username": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "description": "%config.username%"
+        },
+        "utcsLab.domain": {
+          "type": "string",
+          "default": "cs.utexas.edu",
+          "scope": "application",
+          "description": "%config.domain%"
+        },
+        "utcsLab.statusUrl": {
+          "type": "string",
+          "default": "https://apps.cs.utexas.edu/unixlabstatus/",
+          "scope": "application",
+          "description": "%config.statusUrl%"
+        }
+      }
+    }
+  },
+  "main": "./out/extension",
+  "scripts": {
+    "compile": "gulp compile-extension:utcs-lab-machines",
+    "watch": "gulp watch-extension:utcs-lab-machines",
+    "test": "node --test \"out/test/**/*.test.js\""
+  },
+  "devDependencies": {
+    "@types/node": "24.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abdonmorales/vscode-utcs.git"
+  }
+}
