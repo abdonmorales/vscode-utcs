@@ -153,13 +153,16 @@ jobs:
             appimage_arch: aarch64
           # Linux servers for SSH remotes (Open Remote - SSH downloads the
           # one matching the client via product.json#serverDownloadUrlTemplate).
+          # Not the -min variants: like the desktop builds above, the server is
+          # built without property mangling, which rejects tests picked from
+          # upstream (upstream no longer mangles, so it does not guard them).
           - os: ubuntu-latest
-            gulp_task: vscode-reh-linux-x64-min
+            gulp_task: vscode-reh-linux-x64
             build_dir: vscode-reh-linux-x64
             kind: server
             server_arch: x64
           - os: ubuntu-24.04-arm
-            gulp_task: vscode-reh-linux-arm64-min
+            gulp_task: vscode-reh-linux-arm64
             build_dir: vscode-reh-linux-arm64
             kind: server
             server_arch: arm64
