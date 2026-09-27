@@ -453,6 +453,11 @@ export class ChatEntitlementService extends Disposable implements IChatEntitleme
 		}
 
 		if (!productService.defaultChatAgent) {
+			// Without a default chat agent there is no built-in chat to set up,
+			// so hide its entry points. The Chat view still appears once an
+			// extension registers a chat participant.
+			this.hiddenWithoutDefaultChatAgent = true;
+			ChatEntitlementContextKeys.Setup.hidden.bindTo(this.contextKeyService).set(true);
 			return; // we need a default chat agent configured going forward from here
 		}
 
@@ -536,6 +541,7 @@ export class ChatEntitlementService extends Disposable implements IChatEntitleme
 	get quotas() { return this._quotas; }
 
 	private readonly chatQuotaExceededContextKey: IContextKey<boolean>;
+	private hiddenWithoutDefaultChatAgent = false;
 	private readonly completionsQuotaExceededContextKey: IContextKey<boolean>;
 
 	private ExtensionQuotaContextKeys = {
@@ -732,8 +738,9 @@ export class ChatEntitlementService extends Disposable implements IChatEntitleme
 			this.context.value.setForceHidden(hidden);
 		} else {
 			// No ChatEntitlementContext (e.g. no defaultChatAgent in product.json).
-			// Set the context key directly as a fallback.
-			ChatEntitlementContextKeys.Setup.hidden.bindTo(this.contextKeyService).set(hidden);
+			// Set the context key directly as a fallback, never un-hiding chat
+			// that is hidden for lack of a default chat agent.
+			ChatEntitlementContextKeys.Setup.hidden.bindTo(this.contextKeyService).set(hidden || this.hiddenWithoutDefaultChatAgent);
 		}
 	}
 
