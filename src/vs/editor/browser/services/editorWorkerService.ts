@@ -38,6 +38,7 @@ import { StringEdit } from '../../common/core/edits/stringEdit.js';
 import { OffsetRange } from '../../common/core/ranges/offsetRange.js';
 import { FileAccess } from '../../../base/common/network.js';
 import { isCompletionsEnabledWithTextResourceConfig } from '../../common/services/completionsEnablement.js';
+import { collectIncludeTree, IIncludeDirective, parseIncludeDirectives } from '../../common/services/includeTree.js';
 
 /**
  * Stop the worker if it was not needed for 5 min.
@@ -248,11 +249,18 @@ export class EditorWorkerService extends Disposable implements IEditorWorkerServ
 	}
 }
 
+/**
+ * Languages whose documents pull in others with `#include` or `#import`. Header
+ * files are `cpp` even in C projects, so these are matched as one family.
+ */
+const INCLUDING_LANGUAGES = new Set(['c', 'cpp', 'cuda-cpp', 'objective-c', 'objective-cpp']);
+
 class WordBasedCompletionItemProvider implements languages.CompletionItemProvider {
 
 	private readonly _workerManager: WorkerManager;
 	private readonly _configurationService: ITextResourceConfigurationService;
 	private readonly _modelService: IModelService;
+	private readonly _includeDirectives = new WeakMap<ITextModel, { readonly versionId: number; readonly directives: readonly IIncludeDirective[] }>();
 
 	readonly _debugDisplayName = 'wordbasedCompletions';
 
@@ -272,6 +280,7 @@ class WordBasedCompletionItemProvider implements languages.CompletionItemProvide
 	async provideCompletionItems(model: ITextModel, position: Position): Promise<languages.CompletionList | undefined> {
 		type WordBasedSuggestionsConfig = {
 			wordBasedSuggestions?: 'off' | 'currentDocument' | 'matchingDocuments' | 'allDocuments' | 'offWithInlineSuggestions';
+			wordBasedSuggestionsIncludeDepth?: number | null;
 		};
 		const config = this._configurationService.getValue<WordBasedSuggestionsConfig>(model.uri, position, 'editor');
 		if (config.wordBasedSuggestions === 'off') {
@@ -284,7 +293,9 @@ class WordBasedCompletionItemProvider implements languages.CompletionItemProvide
 			return undefined;
 		}
 
-		const models: URI[] = [];
+		let models: URI[] = [];
+		const includeDepth = config.wordBasedSuggestionsIncludeDepth;
+		const followIncludes = typeof includeDepth === 'number' && includeDepth >= 0 && INCLUDING_LANGUAGES.has(model.getLanguageId());
 		if (config.wordBasedSuggestions === 'currentDocument') {
 			// only current file and only if not too large
 			if (canSyncModel(this._modelService, model.uri)) {
@@ -299,9 +310,19 @@ class WordBasedCompletionItemProvider implements languages.CompletionItemProvide
 				if (candidate === model) {
 					models.unshift(candidate.uri);
 
-				} else if (config.wordBasedSuggestions === 'allDocuments' || candidate.getLanguageId() === model.getLanguageId()) {
+				} else if (followIncludes
+					? INCLUDING_LANGUAGES.has(candidate.getLanguageId())
+					: config.wordBasedSuggestions === 'allDocuments' || candidate.getLanguageId() === model.getLanguageId()) {
 					models.push(candidate.uri);
 				}
+			}
+			if (followIncludes) {
+				// Only the active document and the open documents it includes,
+				// directly or through nested includes up to the configured depth.
+				// The active document still leads the walk when it is too large to
+				// sync, but then does not contribute words itself.
+				const includeTree = collectIncludeTree(model.uri, models, uri => this._getIncludeDirectives(uri), Math.floor(includeDepth));
+				models = includeTree.filter(uri => uri !== model.uri || canSyncModel(this._modelService, uri));
 			}
 		}
 
@@ -334,6 +355,20 @@ class WordBasedCompletionItemProvider implements languages.CompletionItemProvide
 				};
 			}),
 		};
+	}
+
+	private _getIncludeDirectives(uri: URI): readonly IIncludeDirective[] {
+		const model = this._modelService.getModel(uri);
+		if (!model) {
+			return [];
+		}
+		const cached = this._includeDirectives.get(model);
+		if (cached?.versionId === model.getVersionId()) {
+			return cached.directives;
+		}
+		const directives = parseIncludeDirectives(model.getLinesContent());
+		this._includeDirectives.set(model, { versionId: model.getVersionId(), directives });
+		return directives;
 	}
 }
 

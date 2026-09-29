@@ -76,6 +76,12 @@ const editorConfiguration: IConfigurationNode = {
 			description: nls.localize('wordBasedSuggestions', "Controls whether completions should be computed based on words in the document and from which documents they are computed."),
 			experiment: { mode: 'auto' },
 		},
+		'editor.wordBasedSuggestionsIncludeDepth': {
+			type: ['integer', 'null'],
+			default: null,
+			minimum: 0,
+			markdownDescription: nls.localize('wordBasedSuggestionsIncludeDepth', "In C, C++, CUDA and Objective-C files, limits word based suggestions to the active document and the open documents it pulls in with `#include` or `#import`, following nested includes up to this many levels. `0` uses only the active document and `1` adds the files it includes directly. When not set, `#editor.wordBasedSuggestions#` decides which open documents are used."),
+		},
 		'editor.semanticHighlighting.enabled': {
 			enum: [true, false, 'configuredByTheme'],
 			enumDescriptions: [

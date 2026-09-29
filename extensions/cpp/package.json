@@ -130,7 +130,18 @@
         "language": "cpp",
         "path": "./snippets/cpp.code-snippets"
       }
-    ]
+    ],
+    "configurationDefaults": {
+      "[c]": {
+        "editor.wordBasedSuggestionsIncludeDepth": 1
+      },
+      "[cpp]": {
+        "editor.wordBasedSuggestionsIncludeDepth": 1
+      },
+      "[cuda-cpp]": {
+        "editor.wordBasedSuggestionsIncludeDepth": 1
+      }
+    }
   },
   "repository": {
     "type": "git",
