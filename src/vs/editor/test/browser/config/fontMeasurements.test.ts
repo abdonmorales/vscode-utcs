@@ -51,7 +51,6 @@ suite('FontMeasurements', () => {
 	}
 
 	function hasCache(fontMeasurements: FontMeasurementsImpl, targetWindow: Window): boolean {
-		// eslint-disable-next-line local/code-no-bracket-notation-for-identifiers -- Inspect cache presence without allocating a cache through the public API.
 		return fontMeasurements['_cache'].has(getWindowId(targetWindow));
 	}
 

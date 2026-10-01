@@ -14,7 +14,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/c
 import { NullLogService } from '../../../../platform/log/common/log.js';
 import { ExtensionIdentifier } from '../../../../platform/extensions/common/extensions.js';
 import { nullExtensionDescription } from '../../../services/extensions/common/extensions.js';
-import { MainContext, MainThreadCommandsShape, MainThreadSCMShape, MainThreadTelemetryShape, SCMProviderFeatures } from '../../common/extHost.protocol.js';
+import { MainContext, MainThreadCommandsShape, MainThreadSCMShape, MainThreadTelemetryShape } from '../../common/extHost.protocol.js';
 import { ArgumentProcessor, ExtHostCommands } from '../../common/extHostCommands.js';
 import { ExtHostDocuments } from '../../common/extHostDocuments.js';
 import { ExtHostSCM } from '../../common/extHostSCM.js';
