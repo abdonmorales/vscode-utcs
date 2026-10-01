@@ -93,13 +93,14 @@ class DockBadgeManager {
 	private readonly windows = new Set<number>();
 
 	acquireBadge(window: IBaseWindow): IDisposable {
-		this.windows.add(window.id);
+		const windowId = window.id;
+		this.windows.add(windowId);
 
 		electron.app.setBadgeCount(isLinux ? 1 /* only numbers supported */ : undefined /* generic dot */);
 
 		return {
 			dispose: () => {
-				this.windows.delete(window.id);
+				this.windows.delete(windowId);
 
 				if (this.windows.size === 0) {
 					electron.app.setBadgeCount(0);
